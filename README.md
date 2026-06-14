@@ -1,14 +1,13 @@
 # lock-master
 
+**EN** | [DE](README_de.md) | [ES](README_es.md) | [JA](README_ja.md) | [RU](README_ru.md) | [ZH](README_zh-Hans.md)
+
 **Portable, config-driven file-lock system for multi-agent project coordination.**
 
 lock-master provides a lightweight, zero-dependency locking protocol based on
 plain text files. A `LOCK*.txt` file in a project directory signals that the
 project or a component is currently in use -- no agent, automation, or loop
 should modify that area while a valid, non-expired lock exists.
-
-> Additional language versions (es, ja, ru, zh-Hans) are in progress and will
-> be added separately.
 
 ---
 

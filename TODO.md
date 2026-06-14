@@ -2,7 +2,7 @@
 
 ## Planned
 
-- [ ] Additional language versions (es, ja, ru, zh-Hans) -- in progress, being produced by dedicated translation agent from the EN README
+- [x] Additional language versions (es, ja, ru, zh-Hans) -- done: README_es.md, README_ja.md, README_ru.md, README_zh-Hans.md added with language switcher in all READMEs
 - [ ] `lock_create.py` -- convenience script to stamp a new LOCK*.txt from the template
 - [ ] Optional Telegram/webhook notification on lock expiry (prune hook)
 - [ ] GitHub Actions CI: run smoke tests on push
