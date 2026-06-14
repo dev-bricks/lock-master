@@ -1,0 +1,37 @@
+# ============================================================================
+# LOCK-Datei — Projekt-Sperre fuer Multi-Agenten-Koordination
+# ============================================================================
+# Solange eine LOCK*.txt im Projektordner liegt, ist der betroffene Bereich
+# GESPERRT: kein Agent und kein autonomer Loop nimmt dort Aenderungen vor.
+#
+# Dateiname legt den Scope fest (AUTORITATIV ist der Dateiname):
+#   LOCK.txt            = ganzes Projekt gesperrt           (scope = project)
+#   LOCK.<scope>.txt    = nur diese Komponente gesperrt     (scope = <scope>)
+#                         <scope> = freier Name (Unterbereich/Unterordner),
+#                         ohne Punkt, Unterstriche erlaubt.
+#   Beispiele: LOCK.software.txt, LOCK.web.txt, LOCK.app.txt,
+#              LOCK.dev.txt, LOCK.flutter_port.txt
+#
+# Format: eine Einstellung pro Zeile  ->  key: value
+#   Zeilen mit '#' = Kommentar, Leerzeilen werden ignoriert.
+#
+# Felder:
+#   owner             (Pflicht)  Wer haelt die Sperre (Agent/User/Automation).
+#   created           (Pflicht)  ISO-Zeitstempel YYYY-MM-DDTHH:MM (Basis fuer Verfall).
+#   expires_after     (optional) z. B. 24h / 48h / 90m. Default = 24h wenn fehlt.
+#   release_condition (optional) Freitext: was muss passieren, damit frei wird.
+#   mode              (optional) hard (keine Aenderungen, Default) | soft (Lesen/Hinweis ok).
+#   purpose           (optional) Freitext: warum gesperrt / was laeuft gerade.
+#   scope             (optional) nur informativ; autoritativ ist der Dateiname.
+#
+# Freigeben: diese Datei loeschen. Abgelaufene Locks (> expires_after) entfernt
+# der systemweite Stale-Cleanup (_scripts/prune_stale_locks.py) automatisch.
+# Details: _scripts/LOCK-SYSTEM.md (kanonische systemweite Spec).
+# ----------------------------------------------------------------------------
+owner: [Name / Agent / Automation]
+created: YYYY-MM-DDTHH:MM
+expires_after: 24h
+release_condition: [Bedingung oder leer lassen]
+mode: hard
+purpose: [Warum ist der Bereich gesperrt? Was wird gerade gemacht?]
+scope: [project | <scope>]

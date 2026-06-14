@@ -1,0 +1,39 @@
+# lock_roots.json contains real local paths -- never commit
+lock_roots.json
+
+# Auto-generated cache files -- derived artefacts, not source of truth
+LOCK-CACHE.md
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Coverage
+.coverage
+htmlcov/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Test artefacts
+tests/tmp/
+tests/*.lock.txt

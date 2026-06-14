@@ -1,0 +1,43 @@
+{
+  "_comment": "Configuration for system-wide lock scans (lock_scan.py, prune_stale_locks.py). Paths must be absolute. Scan depth limits guard against slow network/cloud filesystems: max_depth limits recursion from each root; skip_dirs are skipped (including their subtree). Roots with 'shallow: true' use shallow_depth instead (for very large trees).",
+  "default_max_depth": 4,
+  "shallow_depth": 2,
+  "skip_dirs": [
+    ".git",
+    ".venv",
+    "venv",
+    "env",
+    "node_modules",
+    "__pycache__",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".pytest_cache",
+    "build",
+    "dist",
+    "releases",
+    "_archive",
+    ".gradle",
+    "android",
+    "ios",
+    "target",
+    ".next",
+    ".cache"
+  ],
+  "roots": [
+    { "path": "/path/to/project-a" },
+    { "path": "/path/to/project-b" },
+    { "path": "/path/to/workspace" },
+    { "path": "/path/to/large-tree", "shallow": true }
+  ],
+  "caches": [
+    {
+      "name": "system-wide",
+      "path": "/path/to/your-scripts-dir/LOCK-CACHE.md"
+    },
+    {
+      "name": "workspace-only",
+      "path": "/path/to/workspace/LOCK-CACHE.md",
+      "filter_prefix": "/path/to/workspace"
+    }
+  ]
+}

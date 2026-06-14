@@ -1,0 +1,49 @@
+# lock-master
+
+> Portable, config-driven multi-agent file-lock system for project coordination.
+
+## What it does
+
+lock-master provides a lightweight file-based locking protocol for coordinating
+multiple agents, automated loops, or humans working across a shared directory
+tree. A `LOCK*.txt` file in a project folder signals "this area is in use" --
+no agent or automation should modify it while a valid, non-expired lock exists.
+
+## Core files
+
+- `lock_utils.py` -- library: parse LOCK files, detect scope from filename,
+  check expiry. Zero dependencies beyond the Python standard library.
+- `lock_scan.py` -- CLI: scan all roots, list active locks, write Markdown
+  cache(s). Read-only by default.
+- `prune_stale_locks.py` -- CLI: remove expired LOCK*.txt files. Supports
+  `--dry-run`.
+- `LOCK_TEMPLATE.txt` -- template to copy when creating a new lock.
+- `lock_roots.json` (user-created, not in repo) -- lists which directories to
+  scan, depth limits, skip-dirs, and optional cache output targets.
+- `lock_roots.example.json` -- annotated example with placeholder paths.
+- `LOCK-SYSTEM.md` -- canonical spec: file format, scope convention, lifecycle,
+  script reference.
+
+## Lock file format
+
+```
+owner: agent-name-or-human
+created: 2026-06-14T10:00
+expires_after: 24h
+mode: hard
+purpose: Refactoring auth module
+release_condition: PR merged
+```
+
+## Scope convention
+
+- `LOCK.txt` -- entire project locked (scope = `project`)
+- `LOCK.<scope>.txt` -- only that component locked (e.g. `LOCK.api.txt`)
+
+## Python version
+
+Requires Python 3.10+ (uses `str | None` union syntax).
+
+## License
+
+MIT -- Copyright (c) 2026 Lukas Geiger
