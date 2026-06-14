@@ -1,0 +1,169 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 240" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="obsidian-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f111a" />
+      <stop offset="100%" stop-color="#07080d" />
+    </linearGradient>
+
+    <!-- Edge Border Gradient -->
+    <linearGradient id="panel-border-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="30%" stop-color="#1e1b4b" stop-opacity="0.5" />
+      <stop offset="70%" stop-color="#2d1500" stop-opacity="0.5" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+
+    <!-- Grid Pattern -->
+    <pattern id="grid-pattern" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1f2937" stroke-width="1" opacity="0.15" />
+      <circle cx="0" cy="0" r="1" fill="#334155" opacity="0.3"/>
+    </pattern>
+
+    <!-- Text Gradients -->
+    <linearGradient id="indigo-text-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#818cf8" />
+      <stop offset="100%" stop-color="#6366f1" />
+    </linearGradient>
+
+    <linearGradient id="amber-text-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+
+    <!-- Glow Filters -->
+    <filter id="glow-indigo" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <filter id="glow-amber" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <style>
+    .cursor {
+      animation: blink-anim 1.2s infinite;
+    }
+    @keyframes blink-anim {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    .pulse-dot {
+      transform-origin: 403px 180px;
+      animation: pulse-anim 2.5s infinite ease-in-out;
+    }
+    @keyframes pulse-anim {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.6); opacity: 0.4; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .node-pulse {
+      animation: node-pulse-anim 3s infinite ease-in-out;
+    }
+    @keyframes node-pulse-anim {
+      0%, 100% { transform: scale(1); opacity: 0.3; }
+      50% { transform: scale(1.5); opacity: 0.8; }
+    }
+    .agent-line {
+      stroke-dasharray: 5;
+      animation: dash-anim 25s linear infinite;
+    }
+    @keyframes dash-anim {
+      to {
+        stroke-dashoffset: -100;
+      }
+    }
+  </style>
+
+  <!-- Background Panel -->
+  <rect x="8" y="8" width="984" height="224" rx="20" fill="url(#obsidian-grad)" stroke="url(#panel-border-grad)" stroke-width="1.5" />
+  <rect x="8" y="8" width="984" height="224" rx="20" fill="url(#grid-pattern)" />
+
+  <!-- Corner Crosshairs / Tech Decor -->
+  <path d="M20,24 H28 M24,20 V28" stroke="#334155" stroke-width="1.5" opacity="0.6"/>
+  <path d="M972,24 H980 M976,20 V28" stroke="#334155" stroke-width="1.5" opacity="0.6"/>
+  <path d="M20,216 H28 M24,212 V220" stroke="#334155" stroke-width="1.5" opacity="0.6"/>
+  <path d="M972,216 H980 M976,212 V220" stroke="#334155" stroke-width="1.5" opacity="0.6"/>
+
+  <!-- Left Side: Icon Group -->
+  <g transform="translate(15, 0)">
+    <!-- Orbits/Rings (Background) -->
+    <circle cx="195" cy="120" r="75" fill="none" stroke="#6366f1" stroke-width="1" stroke-dasharray="4 8" opacity="0.2"/>
+    <circle cx="195" cy="120" r="105" fill="none" stroke="#f59e0b" stroke-width="1" stroke-dasharray="2 6" opacity="0.15"/>
+
+    <!-- Coordination Network Lines (Behind Padlock) -->
+    <!-- Diagonals -->
+    <line x1="95" y1="65" x2="305" y2="175" stroke="#6366f1" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.25"/>
+    <line x1="295" y1="65" x2="85" y2="175" stroke="#6366f1" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.25"/>
+    <line x1="195" y1="35" x2="195" y2="205" stroke="#6366f1" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.25"/>
+
+    <!-- Perimeter Network (Agents loop) -->
+    <polygon points="95,65 195,35 295,65 305,175 195,205 85,175" fill="none" stroke="#6366f1" stroke-width="1.5" opacity="0.3" class="agent-line"/>
+
+    <!-- Padlock Lock Connections to Agents -->
+    <line x1="95" y1="65" x2="173" y2="80" stroke="#f59e0b" stroke-width="1.5" opacity="0.4"/>
+    <line x1="295" y1="65" x2="217" y2="80" stroke="#6366f1" stroke-width="1.5" opacity="0.4"/>
+    <line x1="305" y1="175" x2="235" y2="150" stroke="#6366f1" stroke-width="1.5" opacity="0.4"/>
+    <line x1="85" y1="175" x2="155" y2="150" stroke="#f59e0b" stroke-width="1.5" opacity="0.4"/>
+    <line x1="195" y1="35" x2="195" y2="58" stroke="#f59e0b" stroke-width="1.5" opacity="0.4"/>
+    <line x1="195" y1="205" x2="195" y2="175" stroke="#6366f1" stroke-width="1.5" opacity="0.4"/>
+
+    <!-- PADLOCK & FILE SYMBOL (Centered) -->
+    <!-- Shackle -->
+    <path d="M173,105 V80 a22,22 0 0,1 44,0 v25" fill="none" stroke="#f59e0b" stroke-width="4.5" stroke-linecap="round" filter="url(#glow-amber)" style="opacity: 0.95;" />
+
+    <!-- Document Body (Padlock base) -->
+    <path d="M155,105 H215 L235,125 V165 C235,170 230,175 225,175 H165 C160,175 155,170 155,165 Z" fill="#11131e" stroke="#6366f1" stroke-width="3" filter="url(#glow-indigo)"/>
+    
+    <!-- Folded Corner Tab -->
+    <path d="M215,105 V125 H235 Z" fill="#1a1d2e" stroke="#6366f1" stroke-width="2" />
+
+    <!-- Code Lines inside Document -->
+    <path d="M173,132 H212" stroke="#94a3b8" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+    <path d="M173,144 H202" stroke="#94a3b8" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+    <path d="M173,156 H217" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+
+    <!-- Agent Node Circles -->
+    <!-- Agent 1 (Amber, Active) -->
+    <circle cx="95" cy="65" r="12" fill="#f59e0b" class="node-pulse" style="transform-origin: 95px 65px;"/>
+    <circle cx="95" cy="65" r="5" fill="#f59e0b"/>
+
+    <!-- Agent 2 (Indigo) -->
+    <circle cx="295" cy="65" r="12" fill="#6366f1" class="node-pulse" style="transform-origin: 295px 65px;"/>
+    <circle cx="295" cy="65" r="5" fill="#6366f1"/>
+
+    <!-- Agent 3 (Indigo) -->
+    <circle cx="305" cy="175" r="12" fill="#6366f1" class="node-pulse" style="transform-origin: 305px 175px;"/>
+    <circle cx="305" cy="175" r="5" fill="#6366f1"/>
+
+    <!-- Agent 4 (Amber, Active) -->
+    <circle cx="85" cy="175" r="12" fill="#f59e0b" class="node-pulse" style="transform-origin: 85px 175px;"/>
+    <circle cx="85" cy="175" r="5" fill="#f59e0b"/>
+
+    <!-- Agent 5 (Amber, Active) -->
+    <circle cx="195" cy="35" r="12" fill="#f59e0b" class="node-pulse" style="transform-origin: 195px 35px;"/>
+    <circle cx="195" cy="35" r="5" fill="#f59e0b"/>
+
+    <!-- Agent 6 (Indigo) -->
+    <circle cx="195" cy="205" r="12" fill="#6366f1" class="node-pulse" style="transform-origin: 195px 205px;"/>
+    <circle cx="195" cy="205" r="5" fill="#6366f1"/>
+  </g>
+
+  <!-- Right Side: Brand Text -->
+  <!-- Terminal Prompt Symbol -->
+  <text x="350" y="142" fill="url(#amber-text-grad)" font-family="ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace" font-size="68" font-weight="700" opacity="0.9">&gt;</text>
+
+  <!-- Main Wordmark -->
+  <text x="395" y="140" fill="#f8fafc" font-family="ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace" font-size="68" font-weight="700" letter-spacing="-1">lock-<tspan fill="url(#indigo-text-grad)">master</tspan><tspan fill="url(#amber-text-grad)" class="cursor">_</tspan></text>
+
+  <!-- Tagline Dot Indicator -->
+  <circle cx="403" cy="180" r="4.5" fill="#f59e0b" />
+  <circle cx="403" cy="180" r="10" fill="#f59e0b" class="pulse-dot" />
+
+  <!-- Tagline Text -->
+  <text x="422" y="186" fill="#64748b" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="600" letter-spacing="4" text-transform="uppercase">multi-agent file locks</text>
+
+</svg>

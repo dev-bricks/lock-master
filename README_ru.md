@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/banner.svg" alt="lock-master" width="100%"></p>
+
 # lock-master
 
 [EN](README.md) | [DE](README_de.md) | [ES](README_es.md) | [JA](README_ja.md) | **RU** | [ZH](README_zh-Hans.md)
