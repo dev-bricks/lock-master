@@ -2,12 +2,44 @@
 
 > Portable, config-driven multi-agent file-lock system for project coordination.
 
+## Last-checked: 2026-06-16
+
 ## What it does
 
 lock-master provides a lightweight file-based locking protocol for coordinating
 multiple agents, automated loops, or humans working across a shared directory
 tree. A `LOCK*.txt` file in a project folder signals "this area is in use" --
 no agent or automation should modify it while a valid, non-expired lock exists.
+
+## Audience
+
+- Codex, Claude Code, Gemini/agy and other coding agents that share one working tree.
+- Automation maintainers who need a simple cross-tool "do not edit this scope" marker.
+- Teams that want project-level and component-level coordination without a server.
+- Local-first tool authors who prefer transparent text files over hidden lock databases.
+- Human maintainers who need a quick read-only overview of active agent work.
+
+## Search Phrases
+
+```
+dev-bricks lock-master
+lock-master LOCK*.txt
+multi-agent file locking
+AI agent project coordination lock files
+Codex Claude lock files
+project component locking for coding agents
+zero dependency Python lock scanner
+LOCK.txt stale cleanup
+LOCK-CACHE.md active locks
+```
+
+## Disambiguation
+
+This repository is about text-file coordination for shared workspaces. It is not
+related to Master Lock or Lockmaster physical locks, GitHub branch protection,
+Azure DevOps branch locking, Redis mutex libraries, database row locks, or cloud
+file-sharing APIs. For accurate results, search with `dev-bricks`, `LOCK*.txt`,
+`Codex`, `Claude Code`, or `multi-agent`.
 
 ## Core files
 

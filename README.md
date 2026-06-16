@@ -13,6 +13,27 @@ should modify that area while a valid, non-expired lock exists.
 
 ---
 
+## Start Here
+
+| Need | Use |
+|------|-----|
+| Prevent two AI agents from editing the same repo at once | `LOCK.txt` in the project root |
+| Let agents work in parallel on separate components | `LOCK.api.txt`, `LOCK.docs.txt`, or any other scoped lock |
+| See all active locks across many project trees | `python lock_scan.py` |
+| Publish a quick human-readable status page | `python lock_scan.py --write-cache` |
+| Remove forgotten locks safely | `python prune_stale_locks.py --dry-run` first |
+
+## Discovery Context
+
+Use lock-master when you need a portable coordination layer for Codex, Claude
+Code, Gemini/agy, local automation loops, or human maintainers sharing the same
+filesystem workspace. It is not a Redis mutex, database lock, Git branch lock,
+padlock/security product, or cloud file-sharing API. The project name is best
+searched together with terms such as `LOCK*.txt`, `multi-agent file locking`,
+`AI agent project coordination`, and `Codex Claude lock files`.
+
+---
+
 ## Features
 
 - **Scope-based locking:** `LOCK.txt` locks the whole project; `LOCK.<scope>.txt` locks a component. Multiple agents can work in parallel on different scopes of the same project.

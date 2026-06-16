@@ -7,6 +7,15 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased]
+
+### Documentation
+
+- Added README entry tables and discovery/disambiguation context for multi-agent
+  workspace locking, Codex/Claude/Gemini coordination, and `LOCK*.txt` search.
+- Standardized `llms.txt` with `Last-checked`, Audience, Search Phrases, and
+  Disambiguation sections.
+
 ## [1.0.0] - 2026-06-14
 
 ### Added

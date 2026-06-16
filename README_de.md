@@ -10,6 +10,27 @@ lock-master bietet ein leichtgewichtiges, abhängigkeitsfreies Sperrprotokoll au
 
 ---
 
+## Einstieg
+
+| Bedarf | Nutzen |
+|--------|--------|
+| Zwei KI-Agenten sollen nicht gleichzeitig dasselbe Repo bearbeiten | `LOCK.txt` im Projekt-Root |
+| Agenten sollen parallel an getrennten Komponenten arbeiten | `LOCK.api.txt`, `LOCK.docs.txt` oder ein anderer Scope |
+| Aktive Sperren über viele Projektbäume sehen | `python lock_scan.py` |
+| Einen schnellen, menschenlesbaren Status veröffentlichen | `python lock_scan.py --write-cache` |
+| Vergessene Sperren sicher entfernen | zuerst `python prune_stale_locks.py --dry-run` |
+
+## Auffindbarkeit und Abgrenzung
+
+lock-master passt zu Codex, Claude Code, Gemini/agy, lokalen Automationsloops
+und menschlichen Maintainern, die denselben Dateisystem-Workspace teilen. Es ist
+kein Redis-Mutex, keine Datenbanksperre, kein Git-Branch-Lock, kein Türschloss
+und keine Cloud-Dateifreigabe-API. Gute Suchphrasen kombinieren den Projektnamen
+mit `LOCK*.txt`, `Multi-Agenten-Dateisperre`, `KI-Agenten-Projektkoordination`
+oder `Codex Claude Lock-Dateien`.
+
+---
+
 ## Features
 
 - **Scope-basiertes Sperren:** `LOCK.txt` sperrt das gesamte Projekt; `LOCK.<scope>.txt` sperrt eine Komponente. Mehrere Agenten können parallel an verschiedenen Scopes desselben Projekts arbeiten.
@@ -18,7 +39,7 @@ lock-master bietet ein leichtgewichtiges, abhängigkeitsfreies Sperrprotokoll au
 - **Markdown-Cache:** `lock_scan.py --write-cache` schreibt eine `LOCK-CACHE.md` für einen schnellen Überblick ohne Scan.
 - **Dry-run-Prune:** `prune_stale_locks.py --dry-run` zeigt vorab, was entfernt würde.
 - **Keine Abhängigkeiten:** reine Python-Standardbibliothek (3.10+).
-- **Config-gesteuert:** alle Roots, Tiefenbegrenzungen, Skip-Verzeichnisse und Cache-Ziele liegen in `lock_roots.json` -- keine hartkodieren Pfade im Code.
+- **Config-gesteuert:** alle Roots, Tiefenbegrenzungen, Skip-Verzeichnisse und Cache-Ziele liegen in `lock_roots.json` -- keine hartkodierten Pfade im Code.
 
 ---
 
