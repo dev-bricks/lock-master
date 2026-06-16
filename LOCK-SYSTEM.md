@@ -54,6 +54,7 @@ are ignored.
 |--------------------|----------|---------|
 | `owner`            | yes      | Who holds the lock (agent / user / automation). |
 | `created`          | yes      | ISO timestamp `YYYY-MM-DDTHH:MM` (base for expiry). |
+| `host`             | optional | Machine/hostname holding the lock — which system locked it (cross-system). |
 | `expires_after`    | optional | e.g. `24h` / `48h` / `90m`. Default = `24h`. |
 | `release_condition`| optional | Free text: what must happen for the lock to be released. |
 | `mode`             | optional | `hard` (no changes, default) \| `soft` (reads/hints ok). |

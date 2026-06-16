@@ -92,6 +92,7 @@ rename it to `LOCK.txt` (or `LOCK.<scope>.txt` for component-level locking):
 ```
 owner: my-agent
 created: 2026-06-14T10:00
+host: laptop
 expires_after: 24h
 mode: hard
 purpose: Refactoring auth module
@@ -132,6 +133,7 @@ Plain text, one `key: value` per line. Lines starting with `#` are comments.
 |---------------------|----------|----------------------|---------|
 | `owner`             | yes      | `my-agent`           | Who holds the lock. |
 | `created`           | yes      | `2026-06-14T10:00`   | ISO timestamp; base for expiry calculation. |
+| `host`              | optional | `laptop`, `server`   | Machine that holds the lock (cross-system: which system locked it). |
 | `expires_after`     | optional | `24h`, `90m`, `2d`   | Duration string. Default: `24h`. |
 | `release_condition` | optional | `PR merged`          | Free-text: when can the lock be released. |
 | `mode`              | optional | `hard` \| `soft`     | `hard` = no changes (default); `soft` = reads/hints ok. |

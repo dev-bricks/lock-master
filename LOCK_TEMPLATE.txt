@@ -18,6 +18,8 @@
 # Felder:
 #   owner             (Pflicht)  Wer haelt die Sperre (Agent/User/Automation).
 #   created           (Pflicht)  ISO-Zeitstempel YYYY-MM-DDTHH:MM (Basis fuer Verfall).
+#   host              (optional) Maschinenname des Systems, das die Sperre haelt
+#                                (cross-system: WELCHES System sperrt gerade).
 #   expires_after     (optional) z. B. 24h / 48h / 90m. Default = 24h wenn fehlt.
 #   release_condition (optional) Freitext: was muss passieren, damit frei wird.
 #   mode              (optional) hard (keine Aenderungen, Default) | soft (Lesen/Hinweis ok).
@@ -30,6 +32,7 @@
 # ----------------------------------------------------------------------------
 owner: [Name / Agent / Automation]
 created: YYYY-MM-DDTHH:MM
+host: [Maschinenname, z. B. LAPTOP | SERVER — oder leer lassen]
 expires_after: 24h
 release_condition: [Bedingung oder leer lassen]
 mode: hard

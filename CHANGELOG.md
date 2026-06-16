@@ -7,6 +7,17 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.0] - 2026-06-16
+
+### Added
+
+- **`host` field** in the LOCK file format (optional): the machine/hostname that
+  holds the lock, for cross-system coordination — makes visible **which** system
+  locked an area. Backwards compatible: `lock_host()` accessor returns `None` when
+  the field is absent. Documented in `LOCK-SYSTEM.md`, `LOCK_TEMPLATE.txt` and READMEs.
+- `host_is_reachable()` stub in `prune_stale_locks.py` (prepared hook for future
+  host-reachability-aware stale cleanup, e.g. via Tailscale ping; not yet active).
+
 ## [Unreleased]
 
 ### Documentation

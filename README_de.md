@@ -86,6 +86,7 @@ In ein Verzeichnis deiner Wahl legen (z. B. `scripts/`).
 ```
 owner: mein-agent
 created: 2026-06-14T10:00
+host: laptop
 expires_after: 24h
 mode: hard
 purpose: Auth-Modul refaktorieren
@@ -126,6 +127,7 @@ Klartext, eine `key: value`-Einstellung pro Zeile. Zeilen mit `#` sind Kommentar
 |---------------------|---------|----------------------|-----------|
 | `owner`             | ja      | `mein-agent`         | Wer hält die Sperre. |
 | `created`           | ja      | `2026-06-14T10:00`   | ISO-Zeitstempel; Basis für Verfallsberechnung. |
+| `host`              | optional | `laptop`, `server`  | Maschine, die die Sperre hält (cross-system: welches System sperrt). |
 | `expires_after`     | optional | `24h`, `90m`, `2d`  | Dauer-String. Standard: `24h`. |
 | `release_condition` | optional | `PR gemergt`        | Freitext: wann kann die Sperre freigegeben werden. |
 | `mode`              | optional | `hard` \| `soft`    | `hard` = keine Änderungen (Standard); `soft` = Lesen/Hinweis ok. |

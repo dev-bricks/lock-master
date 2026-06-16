@@ -120,6 +120,15 @@ def is_expired(lock_path: Path, now: datetime | None = None) -> bool:
     return now > created + expires
 
 
+def lock_host(lock_path: Path) -> str | None:
+    """Machine/hostname from the 'host' field of the LOCK file.
+
+    Identifies which system currently holds the lock (cross-system
+    coordination). Returns None when the field is absent (backwards
+    compatible)."""
+    return parse_lock_file(lock_path).get("host") or None
+
+
 def find_lock_files(project_dir: Path, include_legacy: bool = True):
     """Find all lock files in a project root directory.
     Returns: list of (name, scope, is_legacy)."""

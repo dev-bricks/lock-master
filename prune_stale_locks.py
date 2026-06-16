@@ -27,6 +27,16 @@ import lock_utils
 from lock_scan import DEFAULT_ROOTS_FILE, iter_lock_dirs, load_config
 
 
+def host_is_reachable(host: str | None) -> bool | None:  # noqa: ARG001
+    """Whether the system named in a lock's 'host' field is reachable.
+
+    STUB / prepared hook -- not yet active, always returns None. A future
+    implementation could ping the host (e.g. via Tailscale) so that locks of a
+    permanently unreachable system can be cleaned up earlier; until then locks
+    expire purely via 'expires_after'."""
+    return None
+
+
 def prune(config: dict, dry_run: bool = False) -> int:
     now = datetime.now()
     removed = 0
