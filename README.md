@@ -37,6 +37,8 @@ searched together with terms such as `LOCK*.txt`, `multi-agent file locking`,
 ## Features
 
 - **Scope-based locking:** `LOCK.txt` locks the whole project; `LOCK.<scope>.txt` locks a component. Multiple agents can work in parallel on different scopes of the same project.
+- **Team Locks:** `LOCK.team.<host>.txt` coordinates multiple agents within the same system internally — presence log, file claims, tool claims, and message board in one file. Other systems see the file and stay out.
+- **Cloud-ready:** designed for OneDrive, Dropbox, and other shared filesystems. Team Locks are per-system to handle cloud-sync latency (30 s -- 5 min). Rename-based claims are atomic on NTFS and most cloud-sync filesystems.
 - **Auto-expiry:** every lock has a configurable `expires_after` duration (default 24h). A stale-cleanup script removes forgotten locks.
 - **Read-only scan:** `lock_scan.py` lists all active locks across configured roots without touching any files.
 - **Markdown cache:** `lock_scan.py --write-cache` writes a `LOCK-CACHE.md` for instant status overview -- no scan needed.
@@ -146,14 +148,56 @@ If `created` is absent or unparseable, the file's mtime is used as fallback.
 
 ## Scope Convention
 
-| Filename             | Scope detected | What is locked |
-|----------------------|----------------|----------------|
-| `LOCK.txt`           | `project`      | Entire project directory |
-| `LOCK.api.txt`       | `api`          | Only the `api` component |
-| `LOCK.frontend.txt`  | `frontend`     | Only the `frontend` component |
-| `LOCK.my_scope.txt`  | `my_scope`     | Any freely named sub-area |
+| Filename                          | Scope detected | What is locked |
+|-----------------------------------|----------------|----------------|
+| `LOCK.txt`                        | `project`      | Entire project directory |
+| `LOCK.api.txt`                    | `api`          | Only the `api` component |
+| `LOCK.frontend.txt`               | `frontend`     | Only the `frontend` component |
+| `LOCK.my_scope.txt`               | `my_scope`     | Any freely named sub-area |
+| `LOCK.team.LAPTOP.txt`            | `project`      | Team Lock -- whole project, system `LAPTOP` |
+| `LOCK.team.api.LAPTOP.txt`        | `api`          | Team Lock -- `api` component, system `LAPTOP` |
 
-Detection regex: `^LOCK(\.[^.]+)?\.txt$` (case-insensitive).
+Detection regex: `^LOCK(\.[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*)?\.txt$` (case-insensitive).
+
+---
+
+## Team Locks
+
+A **Team Lock** coordinates multiple agents running in parallel **on the same system** (e.g. a swarm of parallel Codex/Claude agents on one machine). It serves four purposes in a single file:
+
+1. **Presence log** -- every agent checks in before working; checks out when done.
+2. **File/folder claims + queue** -- who is editing what; who is waiting.
+3. **Tool/software/MCP claims + queue** -- exclusive resources (DB connections, running servers, MCP tool sessions).
+4. **Messages/tips** -- short handovers and warnings for teammates.
+
+### Why per-system?
+
+Cloud-sync latency (30 s -- 5 min with OneDrive or Dropbox) makes real-time cross-system locking unreliable. Each system manages its own agents via its own Team Lock; the presence of the file signals other systems to stay out.
+
+### Team Lock lifecycle
+
+```
+CREATE (first agent)  -->  CHECK IN (each agent)  -->  WORK  -->  CHECK OUT  -->  DELETE (last agent)
+```
+
+- **Before touching files:** add your presence entry.
+- **On task change:** update your file/tool claims immediately.
+- **On exit:** remove your entry and claims; delete the file if you are the last.
+- **Conflict copy (two systems wrote simultaneously):** one rename wins. The system whose file was overwritten must back off and retry.
+
+### Creating a Team Lock
+
+Copy `TEAM_LOCK_TEMPLATE.txt` into the project directory and fill in the header:
+
+```
+owner: agent-lead
+created: 2026-06-19T10:00
+host: LAPTOP
+expires_after: 24h
+purpose: Parallel refactor of auth module
+```
+
+Then add presence and claim entries under the relevant sections.
 
 ---
 
@@ -238,15 +282,16 @@ Requires `pytest` (`pip install pytest`).
 
 ```
 lock-master/
-├── lock_utils.py           # Core library: parse, scope, expiry
-├── lock_scan.py            # CLI: list active locks, write cache
-├── prune_stale_locks.py    # CLI: remove expired locks
-├── LOCK_TEMPLATE.txt       # Template for creating a new lock
-├── lock_roots.example.json # Annotated example config
-├── LOCK-SYSTEM.md          # Canonical spec and lifecycle reference
+├── lock_utils.py            # Core library: parse, scope, expiry, team-lock helpers
+├── lock_scan.py             # CLI: list active locks, write cache
+├── prune_stale_locks.py     # CLI: remove expired locks
+├── LOCK_TEMPLATE.txt        # Template for creating an exclusive lock
+├── TEAM_LOCK_TEMPLATE.txt   # Template for creating a team lock
+├── lock_roots.example.json  # Annotated example config
+├── LOCK-SYSTEM.md           # Canonical spec and lifecycle reference
 ├── tests/
-│   └── test_smoke.py       # Smoke tests
-├── LICENSE                 # MIT
+│   └── test_smoke.py        # Smoke tests
+├── LICENSE                  # MIT
 ├── CHANGELOG.md
 ├── TODO.md
 ├── SECURITY.md

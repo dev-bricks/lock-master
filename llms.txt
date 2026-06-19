@@ -2,7 +2,7 @@
 
 > Portable, config-driven multi-agent file-lock system for project coordination.
 
-## Last-checked: 2026-06-16
+## Last-checked: 2026-06-19
 
 ## What it does
 
@@ -31,6 +31,9 @@ project component locking for coding agents
 zero dependency Python lock scanner
 LOCK.txt stale cleanup
 LOCK-CACHE.md active locks
+team lock multi-agent swarm coordination
+OneDrive cloud sync agent lock files
+LOCK.team.LAPTOP.txt
 ```
 
 ## Disambiguation
@@ -67,10 +70,18 @@ purpose: Refactoring auth module
 release_condition: PR merged
 ```
 
+## Lock types
+
+- **Exclusive Lock** (`LOCK.txt` / `LOCK.<scope>.txt`) -- locks the area for all systems and agents.
+- **Team Lock** (`LOCK.team.<host>.txt` / `LOCK.team.<scope>.<host>.txt`) -- coordinates agents within one system; signals other systems to stay out. Contains four sections: presence log, file/folder claims, tool/MCP claims, messages.
+- Cloud-ready: Team Locks are per-system to handle cloud-sync latency (30 s -- 5 min). Rename-based claims are atomic on NTFS / most cloud-sync filesystems.
+
 ## Scope convention
 
 - `LOCK.txt` -- entire project locked (scope = `project`)
 - `LOCK.<scope>.txt` -- only that component locked (e.g. `LOCK.api.txt`)
+- `LOCK.team.<host>.txt` -- team lock, whole project, for system `<host>`
+- `LOCK.team.<scope>.<host>.txt` -- team lock, scoped component, for system `<host>`
 
 ## Python version
 

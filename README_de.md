@@ -34,6 +34,8 @@ oder `Codex Claude Lock-Dateien`.
 ## Features
 
 - **Scope-basiertes Sperren:** `LOCK.txt` sperrt das gesamte Projekt; `LOCK.<scope>.txt` sperrt eine Komponente. Mehrere Agenten können parallel an verschiedenen Scopes desselben Projekts arbeiten.
+- **Team-Locks:** `LOCK.team.<host>.txt` koordiniert mehrere Agenten desselben Systems intern -- Anwesenheitslog, Datei-Claims, Tool-Claims und Nachrichtenbrett in einer Datei. Andere Systeme sehen die Datei und bleiben draußen.
+- **Cloud-Ready:** konzipiert für OneDrive, Dropbox und andere geteilte Dateisysteme. Team-Locks sind pro System, um mit Cloud-Sync-Latenz (30 s -- 5 min) umzugehen. Rename-basierte Claims sind auf NTFS und den meisten Cloud-Sync-Dateisystemen atomar.
 - **Auto-Verfall:** jede Sperre hat eine konfigurierbare `expires_after`-Dauer (Standard 24h). Ein Cleanup-Script entfernt vergessene Sperren.
 - **Read-only-Scan:** `lock_scan.py` listet alle aktiven Sperren über alle konfigurierten Roots, ohne Dateien zu verändern.
 - **Markdown-Cache:** `lock_scan.py --write-cache` schreibt eine `LOCK-CACHE.md` für einen schnellen Überblick ohne Scan.
@@ -140,14 +142,56 @@ Fehlt `created` oder ist nicht parsebar, wird die Datei-mtime als Fallback verwe
 
 ## Scope-Konvention
 
-| Dateiname            | Erkannter Scope | Was gesperrt ist |
-|----------------------|-----------------|------------------|
-| `LOCK.txt`           | `project`       | Gesamtes Projektverzeichnis |
-| `LOCK.api.txt`       | `api`           | Nur die `api`-Komponente |
-| `LOCK.frontend.txt`  | `frontend`      | Nur die `frontend`-Komponente |
-| `LOCK.my_scope.txt`  | `my_scope`      | Beliebig benannter Teilbereich |
+| Dateiname                         | Erkannter Scope | Was gesperrt ist |
+|-----------------------------------|-----------------|------------------|
+| `LOCK.txt`                        | `project`       | Gesamtes Projektverzeichnis |
+| `LOCK.api.txt`                    | `api`           | Nur die `api`-Komponente |
+| `LOCK.frontend.txt`               | `frontend`      | Nur die `frontend`-Komponente |
+| `LOCK.my_scope.txt`               | `my_scope`      | Beliebig benannter Teilbereich |
+| `LOCK.team.LAPTOP.txt`            | `project`       | Team-Lock -- gesamtes Projekt, System `LAPTOP` |
+| `LOCK.team.api.LAPTOP.txt`        | `api`           | Team-Lock -- `api`-Komponente, System `LAPTOP` |
 
-Erkennungsregex: `^LOCK(\.[^.]+)?\.txt$` (case-insensitive).
+Erkennungsregex: `^LOCK(\.[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*)?\.txt$` (case-insensitive).
+
+---
+
+## Team-Locks
+
+Ein **Team-Lock** koordiniert mehrere Agenten, die **auf demselben System** parallel laufen (z. B. ein Schwarm paralleler Codex/Claude-Agenten auf einer Maschine). Er erfüllt vier Aufgaben in einer Datei:
+
+1. **Anwesenheitslog** -- jeder Agent trägt sich vor der Arbeit ein und aus, wenn er fertig ist.
+2. **Datei-/Ordner-Claims + Warteschlange** -- wer bearbeitet was; wer wartet.
+3. **Tool-/Software-/MCP-Claims + Warteschlange** -- exklusive Ressourcen (DB-Verbindungen, laufende Server, MCP-Tool-Sessions).
+4. **Nachrichten/Tipps** -- kurze Übergaben und Warnungen für Teammitglieder.
+
+### Warum pro System?
+
+Cloud-Sync-Latenz (30 s -- 5 min bei OneDrive oder Dropbox) macht systemübergreifende Echtzeit-Sperren unzuverlässig. Jedes System verwaltet seine eigenen Agenten über seinen eigenen Team-Lock; die Präsenz der Datei signalisiert anderen Systemen: draußen bleiben.
+
+### Team-Lock-Lebenszyklus
+
+```
+ANLEGEN (erster Agent)  -->  EINCHECKEN (jeder Agent)  -->  ARBEITEN  -->  AUSCHECKEN  -->  LÖSCHEN (letzter Agent)
+```
+
+- **Vor dem Bearbeiten von Dateien:** eigenen Anwesenheitseintrag hinzufügen.
+- **Bei Aufgabenwechsel:** Datei-/Tool-Claims sofort aktualisieren.
+- **Beim Verlassen:** eigenen Eintrag und Claims entfernen; Datei löschen, wenn man der letzte ist.
+- **Konfliktkopie (zwei Systeme haben gleichzeitig geschrieben):** ein Rename gewinnt. Das System, dessen Datei überschrieben wurde, muss zurückrollen und es erneut versuchen.
+
+### Team-Lock anlegen
+
+`TEAM_LOCK_TEMPLATE.txt` in den Projektordner kopieren und den Header ausfüllen:
+
+```
+owner: agent-lead
+created: 2026-06-19T10:00
+host: LAPTOP
+expires_after: 24h
+purpose: Paralleles Refactoring des Auth-Moduls
+```
+
+Dann Anwesenheits- und Claim-Einträge in den entsprechenden Abschnitten ergänzen.
 
 ---
 
@@ -225,15 +269,16 @@ Erfordert `pytest` (`pip install pytest`).
 
 ```
 lock-master/
-├── lock_utils.py           # Kernbibliothek: Parsen, Scope, Verfall
-├── lock_scan.py            # CLI: aktive Sperren auflisten, Cache schreiben
-├── prune_stale_locks.py    # CLI: abgelaufene Sperren entfernen
-├── LOCK_TEMPLATE.txt       # Vorlage für neue Lock-Dateien
-├── lock_roots.example.json # Annotiertes Beispiel-Config
-├── LOCK-SYSTEM.md          # Kanonische Spec und Lebenszyklus-Referenz
+├── lock_utils.py            # Kernbibliothek: Parsen, Scope, Verfall, Team-Lock-Hilfsfunktionen
+├── lock_scan.py             # CLI: aktive Sperren auflisten, Cache schreiben
+├── prune_stale_locks.py     # CLI: abgelaufene Sperren entfernen
+├── LOCK_TEMPLATE.txt        # Vorlage für neue Exclusive-Lock-Dateien
+├── TEAM_LOCK_TEMPLATE.txt   # Vorlage für neue Team-Lock-Dateien
+├── lock_roots.example.json  # Annotiertes Beispiel-Config
+├── LOCK-SYSTEM.md           # Kanonische Spec und Lebenszyklus-Referenz
 ├── tests/
-│   └── test_smoke.py       # Smoke-Tests
-├── LICENSE                 # MIT
+│   └── test_smoke.py        # Smoke-Tests
+├── LICENSE                  # MIT
 ├── CHANGELOG.md
 ├── TODO.md
 ├── SECURITY.md

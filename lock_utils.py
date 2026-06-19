@@ -11,7 +11,9 @@ Convention:
   - LOCK.<scope>.txt    = only this component locked (scope = "<scope>")
                           free scope name (sub-area/sub-folder),
                           e.g. LOCK.frontend.txt, LOCK.web.txt, LOCK.api.txt
-  - Detection regex: ^LOCK(\.[^.]+)?\.txt$
+  - Detection regex: ^LOCK(\.[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*)?\.txt$
+    Matches: LOCK.txt, LOCK.api.txt, LOCK.team.LAPTOP.txt,
+             LOCK.team.frontend.LAPTOP.txt
   - Legacy (deprecated, do not create): TEST.txt / TESTS.txt
 
 File format (one setting per line, stdlib parser, no extra dependency):
@@ -33,8 +35,9 @@ import re
 from datetime import datetime, timedelta
 from pathlib import Path
 
-# Current lock files: LOCK.txt + LOCK.<scope>.txt
-LOCK_RE = re.compile(r"^LOCK(?:\.([^.]+))?\.txt$", re.IGNORECASE)
+# Current lock files: LOCK.txt, LOCK.<scope>.txt, LOCK.team.<host>.txt,
+# LOCK.team.<scope>.<host>.txt (multi-segment names allowed)
+LOCK_RE = re.compile(r"^LOCK(?:\.([A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*))?\.txt$", re.IGNORECASE)
 # Legacy locks (still recognised, but marked as deprecated)
 LEGACY_LOCK_NAMES = ("TEST.txt", "TESTS.txt")
 
@@ -46,12 +49,39 @@ _DURATION_UNITS = {"s": "seconds", "m": "minutes", "h": "hours", "d": "days"}
 
 
 def scope_from_name(name: str) -> str | None:
-    """Derive scope from filename. LOCK.txt -> 'project',
-    LOCK.<scope>.txt -> '<scope>'. Returns None if not a lock filename."""
+    """Derive scope from filename.
+
+    LOCK.txt                      -> 'project'
+    LOCK.api.txt                  -> 'api'
+    LOCK.team.LAPTOP.txt          -> 'project'  (team lock, whole project)
+    LOCK.team.frontend.LAPTOP.txt -> 'frontend' (team lock, scoped)
+
+    Returns None if not a lock filename.
+    Team locks are identified by a 'team.' prefix in the segment string;
+    use is_team_lock() to distinguish them from exclusive locks.
+    """
     m = LOCK_RE.match(name)
     if not m:
         return None
-    return m.group(1) if m.group(1) else "project"
+    segments = m.group(1)
+    if not segments:
+        return "project"
+    parts = segments.split(".")
+    # Team lock: LOCK.team.<host>.txt  or  LOCK.team.<scope>.<host>.txt
+    if parts[0].lower() == "team":
+        if len(parts) == 2:
+            return "project"
+        # middle parts are the scope; last part is host
+        return ".".join(parts[1:-1])
+    return segments
+
+
+def is_team_lock(name: str) -> bool:
+    """Return True if filename is a Team Lock (LOCK.team.*.txt)."""
+    m = LOCK_RE.match(name)
+    if not m or not m.group(1):
+        return False
+    return m.group(1).lower().startswith("team.")
 
 
 def is_lock_file(name: str) -> bool:

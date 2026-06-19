@@ -4,8 +4,16 @@ lock_roots.json
 # Auto-generated cache files -- derived artefacts, not source of truth
 LOCK-CACHE.md
 
+# Local development snapshots and private runtime data
+_Local_DEV*/
+data/
+*.db
+.env
+.env.*
+
 # Python
 __pycache__/
+*.pyc
 *.py[cod]
 *.pyo
 *.pyd
@@ -28,6 +36,8 @@ env/
 htmlcov/
 
 # Editor / OS
+.idea/
+.vscode/
 .DS_Store
 Thumbs.db
 *.swp

@@ -37,9 +37,11 @@ derived quick-index only.
 - `LOCK.<scope>.txt` -- only that component locked; free scope name
   (sub-area / sub-folder), e.g. `LOCK.frontend.txt`, `LOCK.api.txt`,
   `LOCK.mobile.txt`.
+- `LOCK.team.<host>.txt` -- Team Lock for the whole project (see below).
+- `LOCK.team.<scope>.<host>.txt` -- Team Lock for a specific component (see below).
 - Multiple agents can work in parallel on different components of the same
   project using different scoped locks.
-- Detection regex: `^LOCK(\.[^.]+)?\.txt$`
+- Detection regex: `^LOCK(\.[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*)?\.txt$`
 - Legacy `TEST.txt` / `TESTS.txt` -- deprecated, do not create new ones
   (still recognised as a lock, but not subject to automatic expiry).
 
@@ -63,6 +65,71 @@ are ignored.
 
 If `created` is missing or unparseable, the file's mtime is used as fallback
 for expiry calculation.
+
+---
+
+---
+
+## Lock Types: Exclusive vs. Team
+
+### Exclusive Lock (default)
+
+`LOCK.txt` or `LOCK.<scope>.txt` -- locks the area for all systems and all
+agents. No other system or agent may modify the locked area while the lock
+is active. Use this when only one system should work in an area at a time.
+
+### Team Lock
+
+`LOCK.team.<host>.txt` or `LOCK.team.<scope>.<host>.txt` -- coordinates
+multiple agents **within one system** (e.g. several parallel agents on the
+same machine). It signals "my system is active here; other systems should
+stay out."
+
+**Why per-system, not cross-system?** Cloud-sync latency (30 s -- 5 min
+with OneDrive, Dropbox, or other shared filesystems) makes real-time
+coordination across system boundaries unreliable. Each system manages its
+own agents internally via the Team Lock; cross-system exclusion is achieved
+by the presence of the Team Lock file itself (other systems see it and stay
+out).
+
+**When a second system wants to enter the same scope:**
+- If the scopes do not overlap: it may create its own
+  `LOCK.team.<scope>.<its-host>.txt` for its slice.
+- If the scopes overlap: treat the existing Team Lock like an Exclusive Lock
+  -- wait or choose a different task.
+
+**Conflict copies (cloud-sync rename collision):** When two systems write
+a Team Lock simultaneously, one rename wins and one becomes a conflict copy.
+The system whose file survived continues; the other must back off and retry.
+On NTFS and most cloud-sync filesystems, a rename within the same directory
+is atomic and can be used as a lightweight claim mechanism.
+
+### Required content of a Team Lock file
+
+A Team Lock must contain all four sections (use `TEAM_LOCK_TEMPLATE.txt`):
+
+1. **Presence log** -- loop ID, agent name, role, main task, start time.
+   Every agent checks in here before working; removes its entry when done.
+2. **File/folder claims + queue** -- who is editing what; who is waiting.
+3. **Tool/software/MCP claims + queue** -- exclusive resources (e.g. a
+   running server, a DB connection, a specific MCP tool). Only claim what
+   is truly exclusive; keep claims tight.
+4. **Messages, tips, lessons learned** -- short handovers, warnings, notes
+   for other agents on the same team.
+
+### Team Lock coordination rules
+
+- **Check in before working:** add your presence entry before touching files.
+- **Rotate roles when requested** by the team coordinator (first-in agent
+  or designated lead).
+- **Choose a complementary slice** if a resource is already claimed; do not
+  double-claim.
+- **Update claims on task change:** if you switch to a different area,
+  update your claim immediately.
+- **Respect queue order:** agents listed as waiting in the queue have
+  priority when the resource becomes free.
+- **Clean up on exit:** remove your presence entry and your claims. Delete
+  the Team Lock file only when the presence log is fully empty.
 
 ---
 

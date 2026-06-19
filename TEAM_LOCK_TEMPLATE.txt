@@ -1,0 +1,73 @@
+# ============================================================================
+# TEAM LOCK -- Multi-Agent Coordination within One System
+# ============================================================================
+# Filename convention (AUTHORITATIVE is the filename):
+#   LOCK.team.<host>.txt            = team lock, whole project
+#   LOCK.team.<scope>.<host>.txt    = team lock, specific component
+#
+# Purpose: Coordinate multiple agents working IN PARALLEL on the SAME system.
+# Signals to other systems: "this area is in use -- stay out."
+#
+# Cloud-sync note: Team locks are per-system because cloud-sync latency
+# (30 s -- 5 min) makes real-time cross-system coordination unreliable.
+# Each system uses its own team lock; the file presence itself signals
+# other systems to stay out.
+#
+# Lifecycle:
+#   CREATE  -- Before the first agent starts work; fill in header fields.
+#   CHECK IN  -- Each agent adds its presence entry before touching files.
+#   UPDATE  -- Update claims on task change; respect queue order.
+#   CHECK OUT -- Remove your presence entry and claims when done.
+#   DELETE  -- The last agent to leave deletes this file.
+#
+# For the full spec, see LOCK-SYSTEM.md.
+# ============================================================================
+
+# --- Header fields (required) -----------------------------------------------
+owner: [first agent or team lead]
+created: YYYY-MM-DDTHH:MM
+host: [hostname / system identifier, e.g. LAPTOP | WORKSTATION | SERVER-01]
+expires_after: 24h
+mode: hard
+purpose: [What is this team working on?]
+
+# ============================================================================
+# SECTION 1 -- PRESENCE LOG
+# Who is currently active? Each agent adds one line on check-in; removes it
+# on check-out. Delete this file when all entries are gone.
+# Format: loop-id | agent-name | role | main-task | start-time
+# ============================================================================
+# PRESENCE:
+# [loop-001] | [agent-name] | [role, e.g. lead / reviewer / writer] | [main task] | [YYYY-MM-DDTHH:MM]
+
+# ============================================================================
+# SECTION 2 -- FILE / FOLDER CLAIMS + QUEUE
+# Who is editing what? Who is waiting for what?
+# Only claim what you are ACTIVELY editing (keep claims tight).
+# Update immediately when you switch areas.
+# Format: [agent-name] EDITING  <path-or-glob>
+#         [agent-name] WAITING  <path-or-glob>
+# ============================================================================
+# FILE-CLAIMS:
+# [agent-name] EDITING  <YOUR_ROOT>/project/src/module.py
+# [agent-name] WAITING  <YOUR_ROOT>/project/src/module.py
+
+# ============================================================================
+# SECTION 3 -- TOOL / SOFTWARE / MCP CLAIMS + QUEUE
+# Exclusive resources (running servers, DB connections, specific MCP tools).
+# Only list truly exclusive resources; shared read-only tools need no claim.
+# Format: [agent-name] USING   <tool-or-resource>
+#         [agent-name] WAITING <tool-or-resource>
+# ============================================================================
+# TOOL-CLAIMS:
+# [agent-name] USING   mcp::ellmos-filecommander::fc_start_session
+# [agent-name] WAITING mcp::ellmos-filecommander::fc_start_session
+
+# ============================================================================
+# SECTION 4 -- MESSAGES / TIPS / LESSONS LEARNED
+# Short handovers, warnings, notes for teammates on this system.
+# Remove entries after they have been read by all relevant agents.
+# Format: [YYYY-MM-DDTHH:MM] [agent-name]: <message>
+# ============================================================================
+# MESSAGES:
+# [YYYY-MM-DDTHH:MM] [agent-name]: <message or tip>
