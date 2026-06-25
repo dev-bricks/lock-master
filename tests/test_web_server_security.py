@@ -29,3 +29,17 @@ def test_safe_md_filename_rejects_paths_and_empty_values():
 def test_safe_header_value_blocks_response_splitting():
     assert web_server._safe_header_value("http://127.0.0.1:8095") == "http://127.0.0.1:8095"
     assert web_server._safe_header_value("http://127.0.0.1:8095\r\nX-Bad: 1") is None
+
+
+def test_canonical_allowed_origin_never_reflects_untrusted_header():
+    assert web_server._canonical_allowed_origin(8095, "http://127.0.0.1:8095") == (
+        "http://127.0.0.1:8095"
+    )
+    assert web_server._canonical_allowed_origin(8095, "http://localhost:8095") == (
+        "http://localhost:8095"
+    )
+    assert web_server._canonical_allowed_origin(8095, "http://[::1]:8095") == (
+        "http://[::1]:8095"
+    )
+    assert web_server._canonical_allowed_origin(8095, "http://evil.test:8095") is None
+    assert web_server._canonical_allowed_origin(8095, "http://127.0.0.1:8095\r\nX-Bad: 1") is None

@@ -81,6 +81,18 @@ def _safe_header_value(value: str | None) -> str | None:
     return value
 
 
+def _canonical_allowed_origin(port: int, origin: str | None) -> str | None:
+    if not origin:
+        return None
+    if origin == f"http://127.0.0.1:{port}":
+        return f"http://127.0.0.1:{port}"
+    if origin == f"http://localhost:{port}":
+        return f"http://localhost:{port}"
+    if origin == f"http://[::1]:{port}":
+        return f"http://[::1]:{port}"
+    return None
+
+
 def _load_user_profile() -> dict:
     if USER_PROFILE_FILE.exists():
         try:
@@ -774,13 +786,7 @@ class WatcherHandler(BaseHTTPRequestHandler):
     def _origin_allowed(self, origin: str | None) -> bool:
         if not origin:
             return True
-        parsed = urllib.parse.urlparse(origin)
-        port = parsed.port or (80 if parsed.scheme == "http" else None)
-        return (
-            parsed.scheme == "http"
-            and parsed.hostname in {"127.0.0.1", "localhost", "::1"}
-            and port == self.server.server_address[1]
-        )
+        return _canonical_allowed_origin(self.server.server_address[1], origin) is not None
 
     def _ensure_write_origin_allowed(self) -> bool:
         if self._origin_allowed(self.headers.get("Origin")):
@@ -789,8 +795,10 @@ class WatcherHandler(BaseHTTPRequestHandler):
         return False
 
     def _cors_headers(self):
-        origin = _safe_header_value(self.headers.get("Origin"))
-        if origin and self._origin_allowed(origin):
+        origin = _canonical_allowed_origin(
+            self.server.server_address[1], self.headers.get("Origin")
+        )
+        if origin:
             self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Vary", "Origin")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
