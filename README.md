@@ -43,6 +43,7 @@ searched together with terms such as `LOCK*.txt`, `multi-agent file locking`,
 - **Read-only scan:** `lock_scan.py` lists all active locks across configured roots without touching any files.
 - **Markdown cache:** `lock_scan.py --write-cache` writes a `LOCK-CACHE.md` for instant status overview -- no scan needed.
 - **Dry-run prune:** `prune_stale_locks.py --dry-run` previews what would be removed.
+- **Optional local watcher UI:** `watcher/` adds a localhost daemon, REST API, and browser UI for live status, room maps, history, user locks, and prune actions.
 - **Zero dependencies:** pure Python standard library (3.10+).
 - **Config-driven:** all roots, depth limits, skip-dirs and cache targets live in `lock_roots.json` -- no hardcoded paths.
 
@@ -124,6 +125,37 @@ python lock_scan.py --write-cache
 ```
 
 Writes `LOCK-CACHE.md` as defined in the `"caches"` key of `lock_roots.json`.
+
+---
+
+## Optional Watcher UI
+
+The `watcher/` directory contains an optional local daemon, REST API, and
+browser UI. It uses the same `lock_roots.json`, `lock_scan.py`,
+`lock_utils.py`, and `prune_stale_locks.py` from the repository root.
+
+From the repository root:
+
+```bash
+python watcher/lock_watcher.py --update-cache
+python watcher/web_server.py --port 8095
+```
+
+On Windows:
+
+```bat
+watcher\START.bat
+```
+
+Open:
+
+```text
+http://127.0.0.1:8095
+```
+
+Runtime data is stored outside the repository by default in
+`~/.lock_master_watcher` and can be redirected with `LOCK_MASTER_WATCHER_DATA`.
+See [watcher/README.md](watcher/README.md) for API and daemon details.
 
 ---
 
@@ -285,6 +317,7 @@ lock-master/
 ├── lock_utils.py            # Core library: parse, scope, expiry, team-lock helpers
 ├── lock_scan.py             # CLI: list active locks, write cache
 ├── prune_stale_locks.py     # CLI: remove expired locks
+├── watcher/                 # Optional localhost daemon, REST API, and Web UI
 ├── LOCK_TEMPLATE.txt        # Template for creating an exclusive lock
 ├── TEAM_LOCK_TEMPLATE.txt   # Template for creating a team lock
 ├── lock_roots.example.json  # Annotated example config

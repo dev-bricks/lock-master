@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lock-Watcher</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header id="topbar">
+    <h1 id="topbar-title">Lock-Watcher</h1>
+    <div id="topbar-stats"></div>
+    <div id="topbar-actions">
+      <button onclick="triggerScan()" title="Scan auslösen">Scan</button>
+      <button onclick="triggerPrune()" title="Abgelaufene bereinigen">Prune</button>
+      <button onclick="showCentralFiles()" title="Zentrale Dateien">Bibliothek</button>
+      <button onclick="showSettings()" title="Einstellungen">Einstellungen</button>
+    </div>
+  </header>
+
+  <main id="app">
+    <div id="room-map"></div>
+  </main>
+
+  <!-- Modal -->
+  <div id="modal-overlay" class="hidden" onclick="closeModal(event)">
+    <div id="modal" onclick="event.stopPropagation()">
+      <div id="modal-header">
+        <h2 id="modal-title"></h2>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

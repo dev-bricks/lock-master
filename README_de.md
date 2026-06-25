@@ -40,6 +40,7 @@ oder `Codex Claude Lock-Dateien`.
 - **Read-only-Scan:** `lock_scan.py` listet alle aktiven Sperren über alle konfigurierten Roots, ohne Dateien zu verändern.
 - **Markdown-Cache:** `lock_scan.py --write-cache` schreibt eine `LOCK-CACHE.md` für einen schnellen Überblick ohne Scan.
 - **Dry-run-Prune:** `prune_stale_locks.py --dry-run` zeigt vorab, was entfernt würde.
+- **Optionale lokale Watcher-UI:** `watcher/` ergänzt Daemon, REST-API und Browser-UI auf localhost für Live-Status, Raumkarte, Verlauf, Userlocks und Prune-Aktionen.
 - **Keine Abhängigkeiten:** reine Python-Standardbibliothek (3.10+).
 - **Config-gesteuert:** alle Roots, Tiefenbegrenzungen, Skip-Verzeichnisse und Cache-Ziele liegen in `lock_roots.json` -- keine hartkodierten Pfade im Code.
 
@@ -118,6 +119,37 @@ python lock_scan.py --write-cache
 ```
 
 Schreibt `LOCK-CACHE.md` gemäß den Einträgen im `"caches"`-Schlüssel von `lock_roots.json`.
+
+---
+
+## Optionale Watcher-UI
+
+Der Ordner `watcher/` enthält einen optionalen lokalen Daemon, eine REST-API
+und eine Browser-UI. Er nutzt dieselbe `lock_roots.json`, `lock_scan.py`,
+`lock_utils.py` und `prune_stale_locks.py` aus dem Repo-Root.
+
+Aus dem Repo-Root:
+
+```bash
+python watcher/lock_watcher.py --update-cache
+python watcher/web_server.py --port 8095
+```
+
+Unter Windows:
+
+```bat
+watcher\START.bat
+```
+
+Öffnen:
+
+```text
+http://127.0.0.1:8095
+```
+
+Runtime-Daten liegen standardmäßig außerhalb des Repos in
+`~/.lock_master_watcher` und können mit `LOCK_MASTER_WATCHER_DATA` umgeleitet
+werden. Details zu API und Daemon stehen in [watcher/README.md](watcher/README.md).
 
 ---
 
@@ -272,6 +304,7 @@ lock-master/
 ├── lock_utils.py            # Kernbibliothek: Parsen, Scope, Verfall, Team-Lock-Hilfsfunktionen
 ├── lock_scan.py             # CLI: aktive Sperren auflisten, Cache schreiben
 ├── prune_stale_locks.py     # CLI: abgelaufene Sperren entfernen
+├── watcher/                 # Optionale localhost-Daemon-, REST-API- und Web-UI
 ├── LOCK_TEMPLATE.txt        # Vorlage für neue Exclusive-Lock-Dateien
 ├── TEAM_LOCK_TEMPLATE.txt   # Vorlage für neue Team-Lock-Dateien
 ├── lock_roots.example.json  # Annotiertes Beispiel-Config

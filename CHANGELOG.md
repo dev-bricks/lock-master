@@ -48,6 +48,14 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Optional `watcher/` integration: localhost daemon, SQLite-backed event/history
+  store, REST API, static Web UI, room map, user lock creation, prune action,
+  cache refresh, daemon heartbeat, and same-host singleton detection.
+- `watcher/README.md` documenting runtime data, start commands, CLI, API, and
+  scan model.
+
 ### Documentation
 
 - Added README entry tables and discovery/disambiguation context for multi-agent

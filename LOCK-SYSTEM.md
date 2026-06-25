@@ -2,7 +2,7 @@
 
 **Scope:** All project roots listed in your `lock_roots.json`.
 **Canonical spec:** This file. Script-level docs are in the individual `.py` files.
-**Updated:** 2026-06-14
+**Updated:** 2026-06-25
 
 ---
 
@@ -28,6 +28,54 @@ Fastest ways to see active locks (in order of speed):
 
 The `LOCK*.txt` files themselves are always authoritative; the cache is a
 derived quick-index only.
+
+---
+
+## Optional Watcher / Web UI
+
+`watcher/` provides an optional local daemon, REST API, and browser UI. It uses
+the same repository-root scripts and config:
+
+- `lock_roots.json`
+- `lock_scan.py`
+- `lock_utils.py`
+- `prune_stale_locks.py`
+
+The watcher does not change the protocol. `LOCK*.txt` files remain the
+authoritative source of truth; SQLite, generated caches, REST responses, and
+the UI are derived views.
+
+Runtime data is stored outside the repository by default:
+
+```text
+~/.lock_master_watcher/watcher.db
+~/.lock_master_watcher/daemon_status.json
+```
+
+Override with `LOCK_MASTER_WATCHER_DATA=/path/to/runtime`.
+
+Start from the repository root:
+
+```bash
+python watcher/lock_watcher.py --update-cache
+python watcher/web_server.py --port 8095
+```
+
+Windows shortcut:
+
+```bat
+watcher\START.bat
+```
+
+Open `http://127.0.0.1:8095`. The web server is intended for local use only.
+
+Watcher scan model:
+
+- full scan every 60 seconds
+- quick check of known active locks every 20 seconds
+- daemon heartbeat every 5 seconds
+- directory statistics every 15 minutes
+- same-host singleton detection through PID and heartbeat
 
 ---
 
