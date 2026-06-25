@@ -56,6 +56,11 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 - `watcher/README.md` documenting runtime data, start commands, CLI, API, and
   scan model.
 
+### Fixed
+
+- Hardened watcher web API path and header handling for CodeQL path-injection
+  and HTTP response-splitting findings.
+
 ### Documentation
 
 - Added README entry tables and discovery/disambiguation context for multi-agent

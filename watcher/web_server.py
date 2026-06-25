@@ -20,7 +20,7 @@ import urllib.parse
 from datetime import datetime
 from http import HTTPStatus
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import config
@@ -33,19 +33,52 @@ DEFAULT_PORT = 8095
 USER_PROFILE_FILE = config._LOCAL_DATA_DIR / "user_profile.json"
 
 _SAFE_NAME_RE = re.compile(r"^[A-Za-z0-9_\-. ]+$")
+_SAFE_MD_FILENAME_RE = re.compile(r"^[A-Za-z0-9_\-. ]+\.md$")
 _SCOPE_RE = re.compile(r"^[A-Za-z0-9_\-]+$")
 
 
-def _resolve_within(root: Path, name: str) -> Path | None:
+def _resolve_within(root: Path, name: str, *, allow_subdirs: bool = False) -> Path | None:
     """Resolved *name* innerhalb von *root*. Gibt None zurück bei Traversal."""
     resolved_root = root.resolve()
-    resolved = (root / name).resolve()
+    normalized_name = name.replace("\\", "/").strip()
+    if not normalized_name:
+        return None
+    relative = PurePosixPath(normalized_name)
+    if relative.is_absolute():
+        return None
+    parts = relative.parts
+    if any(part in {"", ".", ".."} for part in parts):
+        return None
+    if not allow_subdirs and len(parts) != 1:
+        return None
+    resolved = root.joinpath(*parts).resolve()
     if resolved == resolved_root:
         return resolved
-    sep = os.sep
-    if not str(resolved).startswith(str(resolved_root) + sep):
+    try:
+        resolved.relative_to(resolved_root)
+    except ValueError:
         return None
     return resolved
+
+
+def _safe_room_key(value: str) -> str | None:
+    value = value.strip()
+    return value if _SCOPE_RE.fullmatch(value) else None
+
+
+def _safe_md_filename(value: str) -> str | None:
+    name = value.strip()
+    if not name:
+        return None
+    if not name.endswith(".md"):
+        name += ".md"
+    return name if _SAFE_MD_FILENAME_RE.fullmatch(name) else None
+
+
+def _safe_header_value(value: str | None) -> str | None:
+    if not value or "\r" in value or "\n" in value:
+        return None
+    return value
 
 
 def _load_user_profile() -> dict:
@@ -465,8 +498,10 @@ class WatcherHandler(BaseHTTPRequestHandler):
         self._json_response(files)
 
     def _read_central_file(self, name: str, qs: dict):
-        if not name.endswith(".md"):
-            name += ".md"
+        name = _safe_md_filename(name)
+        if name is None:
+            self._json_error(400, "Invalid filename")
+            return
         safe = _resolve_within(self._central_files_dir(), name)
         if safe is None:
             self._json_error(403, "Forbidden")
@@ -478,15 +513,10 @@ class WatcherHandler(BaseHTTPRequestHandler):
         self._json_response({"name": safe.stem, "filename": safe.name, "content": content})
 
     def _write_central_file(self, body: dict):
-        name = body.get("name", "").strip()
+        name = _safe_md_filename(body.get("name", ""))
         content = body.get("content", "")
         if not name:
             self._json_error(400, "name required")
-            return
-        if not name.endswith(".md"):
-            name += ".md"
-        if not _SAFE_NAME_RE.match(name):
-            self._json_error(400, "Invalid filename")
             return
         lib_dir = self._central_files_dir()
         lib_dir.mkdir(exist_ok=True)
@@ -501,12 +531,17 @@ class WatcherHandler(BaseHTTPRequestHandler):
         """Tauscht eine zentrale Datei (z.B. CLAUDE.md) eines Raumes gegen eine aus der Bibliothek."""
         room_key = body.get("room_key", "").strip()
         target_name = body.get("target_name", "CLAUDE.md").strip()
-        source_name = body.get("source_name", "").strip()
+        source_name = _safe_md_filename(body.get("source_name", ""))
         if not room_key or not source_name:
             self._json_error(400, "room_key and source_name required")
             return
 
-        if not _SAFE_NAME_RE.match(target_name):
+        room_key = _safe_room_key(room_key)
+        target_name = _safe_md_filename(target_name)
+        if room_key is None:
+            self._json_error(400, "Invalid room_key")
+            return
+        if target_name is None:
             self._json_error(400, "Invalid target_name")
             return
 
@@ -520,8 +555,7 @@ class WatcherHandler(BaseHTTPRequestHandler):
             self._json_error(403, "target_name traversal blocked")
             return
 
-        src_filename = source_name if source_name.endswith(".md") else source_name + ".md"
-        source_path = _resolve_within(self._central_files_dir(), src_filename)
+        source_path = _resolve_within(self._central_files_dir(), source_name)
         if source_path is None:
             self._json_error(403, "source_name traversal blocked")
             return
@@ -552,6 +586,10 @@ class WatcherHandler(BaseHTTPRequestHandler):
         self._json_response({"swapped": True, "target": str(target_path), "source": source_name})
 
     def _list_room_files(self, room_key: str, qs: dict):
+        room_key = _safe_room_key(room_key)
+        if room_key is None:
+            self._json_error(400, "Invalid room_key")
+            return
         room = rooms.get_room(room_key)
         if room is None:
             self._json_error(404, "Room not found")
@@ -571,14 +609,16 @@ class WatcherHandler(BaseHTTPRequestHandler):
         self._json_response(md_files)
 
     def _read_room_file(self, room_key: str, filename: str, qs: dict):
+        room_key = _safe_room_key(room_key)
+        filename = _safe_md_filename(filename)
+        if room_key is None:
+            self._json_error(400, "Invalid room_key")
+            return
         room = rooms.get_room(room_key)
         if room is None:
             self._json_error(404, "Room not found")
             return
-        if not filename.endswith(".md"):
-            self._json_error(400, "Only .md files allowed")
-            return
-        if not _SAFE_NAME_RE.match(filename):
+        if filename is None:
             self._json_error(400, "Invalid filename")
             return
         safe = _resolve_within(Path(room["abs_path"]), filename)
@@ -595,17 +635,11 @@ class WatcherHandler(BaseHTTPRequestHandler):
             self._json_error(500, "Read error")
 
     def _write_room_file(self, body: dict):
-        room_key = body.get("room_key", "").strip()
-        filename = body.get("filename", "").strip()
+        room_key = _safe_room_key(body.get("room_key", ""))
+        filename = _safe_md_filename(body.get("filename", ""))
         content = body.get("content", "")
         if not room_key or not filename:
             self._json_error(400, "room_key and filename required")
-            return
-        if not filename.endswith(".md"):
-            self._json_error(400, "Only .md files allowed")
-            return
-        if not _SAFE_NAME_RE.match(filename):
-            self._json_error(400, "Invalid filename")
             return
         room = rooms.get_room(room_key)
         if room is None:
@@ -673,7 +707,8 @@ class WatcherHandler(BaseHTTPRequestHandler):
         if path == "/":
             path = "/index.html"
 
-        safe_path = _resolve_within(STATIC_DIR, urllib.parse.unquote(path.lstrip("/")))
+        static_name = urllib.parse.unquote(path.lstrip("/"))
+        safe_path = _resolve_within(STATIC_DIR, static_name, allow_subdirs=True)
         if safe_path is None:
             self._json_error(403, "Forbidden")
             return
@@ -754,7 +789,7 @@ class WatcherHandler(BaseHTTPRequestHandler):
         return False
 
     def _cors_headers(self):
-        origin = self.headers.get("Origin")
+        origin = _safe_header_value(self.headers.get("Origin"))
         if origin and self._origin_allowed(origin):
             self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Vary", "Origin")
