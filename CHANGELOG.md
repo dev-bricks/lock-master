@@ -7,6 +7,32 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.3.0] - 2026-06-27
+
+### Added
+
+- **User Locks** (`LOCK.user.txt` / `LOCK.user.<scope>.txt`): user-owned full locks that are
+  removed ONLY by the user (manually or via the watcher GUI). Agents and the stale-cleanup
+  never touch them, even when nominally expired. New helpers in `lock_utils.py`:
+  `is_user_lock()`, `is_protected_lock()`, `is_prunable()`; `scope_from_name()` understands the
+  `user` marker.
+- **`LOCK.permissions` permission scheme** (`permissions.py` + `LOCK_PERMISSIONS_TEMPLATE.json`):
+  agent-neutral, folder-scoped allow/deny/ask rules (syntax borrowed from `.claude` —
+  `Bash(...)`, `Read(...)`, `mcp__x__*`), readable by all agents. `evaluate()` precedence
+  deny > ask > allow > default.
+- **Bulk lock / immediate lockdown** (`bulk_lock.py`): guard-protected (`commit` flag),
+  idempotent, reversible (`created_by: bulk` marker + session manifest). Never touches user
+  locks — a folder holding a (even expired) user lock is treated as permanently locked.
+
+### Changed
+
+- `prune_stale_locks.py` now uses `is_prunable()` — user locks are never pruned.
+
+### Notes
+
+- Mirrored from the running `_scripts/` instance (canonical there); this module is the
+  user-neutral publishable copy.
+
 ## [1.2.0] - 2026-06-19
 
 ### Added

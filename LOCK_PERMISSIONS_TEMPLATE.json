@@ -1,0 +1,13 @@
+{
+  "format": "lock-permissions-v1",
+  "scope": "project",
+  "owner": "user",
+  "default": "allow",
+  "rules": {
+    "allow": ["Read(**)", "Bash(python:*)"],
+    "deny": ["Bash(rm:*)", "Write(**/CREDENTIALS/**)", "mcp__*__delete*"],
+    "ask": ["Write(**)"]
+  },
+  "applies_to_agents": ["claude", "codex", "gemini", "kimi", "*"],
+  "note": "Agent-neutrales Rechte-Schema, von allen LLMs lesbar. Durchsetzung = freiwillige Konvention + GUI/Audit (wie LOCK*.txt). Praezedenz: deny > ask > allow > default."
+}

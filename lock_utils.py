@@ -73,6 +73,10 @@ def scope_from_name(name: str) -> str | None:
             return "project"
         # middle parts are the scope; last part is host
         return ".".join(parts[1:-1])
+    # User lock: LOCK.user.txt (project) or LOCK.user.<scope>.txt (component).
+    if parts[0].lower() == "user":
+        scope_segments = parts[1:]
+        return ".".join(scope_segments) if scope_segments else "project"
     return segments
 
 
@@ -82,6 +86,35 @@ def is_team_lock(name: str) -> bool:
     if not m or not m.group(1):
         return False
     return m.group(1).lower().startswith("team.")
+
+
+def is_user_lock(name: str) -> bool:
+    """Return True for LOCK.user(.<scope>).txt — a user-owned full lock.
+
+    User locks are removed ONLY by the user (manually or via the watcher GUI);
+    agents and the stale-cleanup (prune) never touch them, even when nominally
+    expired."""
+    m = LOCK_RE.match(name)
+    if not m or not m.group(1):
+        return False
+    return m.group(1).split(".")[0].lower() == "user"
+
+
+def is_protected_lock(name: str) -> bool:
+    """True if the lock is protected from automatic removal (currently: user locks).
+    Protected locks are never deleted by prune or bulk-unlock actions."""
+    return is_user_lock(name)
+
+
+def is_prunable(lock_path: Path, now: datetime | None = None) -> bool:
+    """True if the stale-cleanup may remove this lock.
+    Condition: expired AND not protected (no user lock) AND not legacy."""
+    name = lock_path.name
+    if name in LEGACY_LOCK_NAMES:
+        return False
+    if is_protected_lock(name):
+        return False
+    return is_expired(lock_path, now)
 
 
 def is_lock_file(name: str) -> bool:

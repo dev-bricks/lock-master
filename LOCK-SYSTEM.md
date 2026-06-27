@@ -87,6 +87,8 @@ Watcher scan model:
   `LOCK.mobile.txt`.
 - `LOCK.team.<host>.txt` -- Team Lock for the whole project (see below).
 - `LOCK.team.<scope>.<host>.txt` -- Team Lock for a specific component (see below).
+- `LOCK.user.txt` / `LOCK.user.<scope>.txt` -- User Lock (see below): user-owned
+  full lock, removed ONLY by the user.
 - Multiple agents can work in parallel on different components of the same
   project using different scoped locks.
 - Detection regex: `^LOCK(\.[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*)?\.txt$`
@@ -179,6 +181,53 @@ A Team Lock must contain all four sections (use `TEAM_LOCK_TEMPLATE.txt`):
 - **Clean up on exit:** remove your presence entry and your claims. Delete
   the Team Lock file only when the presence log is fully empty.
 
+### User Lock (user-owned full lock -- only the user removes it)
+
+User Locks are a separate, protected category. They lock a project durably, and
+**only the user** (manually or via the watcher GUI) may remove them -- agents and
+the stale-cleanup (`prune_stale_locks.py`) never touch them, even when nominally
+expired.
+
+- `LOCK.user.txt` -- entire project, user-owned lock.
+- `LOCK.user.<scope>.txt` -- component, user-owned lock.
+- The `user` marker segment is reserved (like `team`). Detection:
+  `lock_utils.is_user_lock()`; protection: `lock_utils.is_protected_lock()` /
+  `is_prunable()`.
+- Easiest via the watcher GUI ("Locks/Permissions" button) or the template with
+  `removable_by: user`.
+
+---
+
+## Permission System: LOCK.permissions + Immediate Lockdown
+
+Agent-neutral, folder-scoped permission layer alongside the `LOCK*.txt` files --
+readable by **all** agents (Claude, Codex, Gemini, Kimi).
+
+### `LOCK.permissions.json` -- per-folder permissions
+
+Syntax borrowed from `.claude/settings.json`, but agent-wide and folder-scoped:
+
+```json
+{ "format": "lock-permissions-v1", "default": "allow",
+  "rules": { "allow": ["Read(**)"], "deny": ["Bash(rm:*)", "Write(**/CREDENTIALS/**)"], "ask": ["Write(**)"] },
+  "applies_to_agents": ["claude","codex","gemini","kimi","*"] }
+```
+
+- Patterns: `Tool(glob)` (`Bash(...)`, `Read(...)`, `Write(...)`), `mcp__vendor__tool`, `*`.
+- Precedence: `deny > ask > allow > default`. Evaluation: `permissions.py::evaluate(perm, agent, action)`.
+- Enforcement = voluntary convention + GUI/audit (like `LOCK*.txt`). Template:
+  `LOCK_PERMISSIONS_TEMPLATE.json`.
+
+### Immediate lockdown (central kill switch)
+
+`bulk_lock.py` sets/removes exclusive `LOCK.txt` across all connected top-level
+roots (`lock_roots.json`) in one step:
+
+- `bulk_lock(roots, commit=False)` -- dry-run by default; idempotent (existing locks
+  stay); created locks carry `created_by: bulk` (exact rollback via session manifest).
+- `bulk_unlock(...)` -- removes **only** `created_by: bulk` locks; **never** user locks.
+- CLI: `python bulk_lock.py lock|unlock --commit`.
+
 ---
 
 ## Two Tiers of Enforcement
@@ -254,5 +303,7 @@ and `skip_dirs` (directories skipped including their subtrees, e.g.
 
 ## Library
 
-`lock_utils.py` is the canonical format/scope/expiry library. Import it
-from your own scripts rather than re-implementing the logic.
+`lock_utils.py` is the canonical format/scope/expiry library (incl. `is_user_lock`,
+`is_protected_lock`, `is_prunable`). Import it from your own scripts rather than
+re-implementing the logic. Companion modules: `permissions.py` (LOCK.permissions
+evaluation) and `bulk_lock.py` (immediate lockdown / reversal).

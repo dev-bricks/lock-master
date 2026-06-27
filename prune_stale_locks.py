@@ -47,29 +47,28 @@ def prune(config: dict, dry_run: bool = False) -> int:
         if d in seen:
             continue
         seen.add(d)
-        for name, _scope, is_legacy in lock_utils.find_lock_files(d):
-            if is_legacy:
-                # Legacy TEST.txt/TESTS.txt: no expiry format -> do not remove.
-                continue
+        for name, _scope, _is_legacy in lock_utils.find_lock_files(d):
             lock_path = d / name
-            if lock_utils.is_expired(lock_path, now):
-                created, expires, source = lock_utils.lock_created_and_expiry(lock_path)
-                age_h = (now - created).total_seconds() / 3600
-                if dry_run:
-                    print(f"[would remove] {lock_path} "
-                          f"(age {age_h:.1f}h, expires_after {expires}, source {source})")
-                else:
-                    try:
-                        lock_path.unlink()
-                        print(f"[removed] {lock_path} "
-                              f"(age {age_h:.1f}h, expires_after {expires}, source {source})")
-                    except OSError as exc:
-                        print(f"[ERROR] {lock_path} could not be removed: {exc}")
-                        kept += 1
-                        continue
-                removed += 1
-            else:
+            # is_prunable() excludes legacy (no expiry), user locks (user-only
+            # removal) and non-expired locks.
+            if not lock_utils.is_prunable(lock_path, now):
                 kept += 1
+                continue
+            created, expires, source = lock_utils.lock_created_and_expiry(lock_path)
+            age_h = (now - created).total_seconds() / 3600
+            if dry_run:
+                print(f"[would remove] {lock_path} "
+                      f"(age {age_h:.1f}h, expires_after {expires}, source {source})")
+            else:
+                try:
+                    lock_path.unlink()
+                    print(f"[removed] {lock_path} "
+                          f"(age {age_h:.1f}h, expires_after {expires}, source {source})")
+                except OSError as exc:
+                    print(f"[ERROR] {lock_path} could not be removed: {exc}")
+                    kept += 1
+                    continue
+            removed += 1
 
     verb = "would remove" if dry_run else "removed"
     print(f"prune_stale_locks: {removed} expired LOCK*.txt {verb}, "
