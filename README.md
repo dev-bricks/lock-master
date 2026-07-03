@@ -22,6 +22,7 @@ should modify that area while a valid, non-expired lock exists.
 | See all active locks across many project trees | `python lock_scan.py` |
 | Publish a quick human-readable status page | `python lock_scan.py --write-cache` |
 | Remove forgotten locks safely | `python prune_stale_locks.py --dry-run` first |
+| Stamp a new lock without hand-editing the template | `python lock_create.py <project> [--scope docs] [--team HOST] [--user] [--condition]` |
 
 ## Discovery Context
 

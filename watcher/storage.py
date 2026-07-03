@@ -29,7 +29,7 @@ class LockDB:
                 filename TEXT NOT NULL,
                 project_dir TEXT NOT NULL,
                 scope TEXT,
-                lock_type TEXT DEFAULT 'exclusive' CHECK(lock_type IN ('exclusive', 'team', 'legacy')),
+                lock_type TEXT DEFAULT 'exclusive' CHECK(lock_type IN ('exclusive', 'team', 'user', 'condition', 'legacy')),
                 is_legacy INTEGER DEFAULT 0,
                 status TEXT DEFAULT 'active' CHECK(status IN ('active', 'expired', 'deleted')),
                 owner TEXT,
@@ -87,6 +87,7 @@ class LockDB:
 
     def _migrate(self) -> None:
         """Ergänzt Spalten die in älteren DB-Versionen fehlen."""
+        self._rebuild_locks_if_check_outdated()
         existing = {
             row[1]
             for row in self._conn.execute("PRAGMA table_info(locks)").fetchall()
@@ -100,6 +101,41 @@ class LockDB:
         for col, typedef in migrations:
             if col not in existing:
                 self._conn.execute(f"ALTER TABLE locks ADD COLUMN {col} {typedef}")
+        self._conn.commit()
+
+    def _rebuild_locks_if_check_outdated(self) -> None:
+        """Baut die locks-Tabelle neu, wenn der lock_type-CHECK veraltet ist.
+
+        Aeltere DBs (bis v1.4.0) kennen nur exclusive/team/legacy — User- und
+        Condition-Locks liefen dort in einen IntegrityError. SQLite kann
+        CHECK-Constraints nicht per ALTER aendern, daher Rename + Copy.
+        """
+        row = self._conn.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='locks'"
+        ).fetchone()
+        if row is None or "'condition'" in (row[0] or ""):
+            return
+
+        cols = [
+            r[1] for r in self._conn.execute("PRAGMA table_info(locks)").fetchall()
+        ]
+        # legacy_alter_table: RENAME soll die FK-Referenz in events NICHT auf
+        # locks_old umschreiben.
+        self._conn.execute("PRAGMA legacy_alter_table=ON")
+        self._conn.execute("ALTER TABLE locks RENAME TO locks_old")
+        self._conn.execute("PRAGMA legacy_alter_table=OFF")
+        self.init_db()
+        new_cols = {
+            r[1] for r in self._conn.execute("PRAGMA table_info(locks)").fetchall()
+        }
+        for col in cols:
+            if col not in new_cols:
+                self._conn.execute(f"ALTER TABLE locks ADD COLUMN {col} TEXT")
+        col_list = ", ".join(cols)
+        self._conn.execute(
+            f"INSERT INTO locks ({col_list}) SELECT {col_list} FROM locks_old"
+        )
+        self._conn.execute("DROP TABLE locks_old")
         self._conn.commit()
 
     def upsert_lock(self, lock_data: dict) -> int:

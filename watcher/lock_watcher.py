@@ -295,18 +295,27 @@ def run_daemon(update_cache: bool) -> None:
                 last_heartbeat = time.monotonic()
 
             if now - last_full_scan >= config.FULL_SCAN_INTERVAL:
-                stats = _run_full_scan(db, cfg, update_cache)
+                # Ein fehlgeschlagener Scan darf den Daemon nicht beenden
+                try:
+                    stats = _run_full_scan(db, cfg, update_cache)
+                    print(
+                        f"[{_now_iso()}] Full-Scan: {stats['total']} aktiv, "
+                        f"{stats['new']} neu, {stats['modified']} geändert, "
+                        f"{stats['expired']} abgelaufen, {stats['deleted']} gelöscht"
+                    )
+                except Exception as exc:
+                    print(f"[{_now_iso()}] Full-Scan fehlgeschlagen: {exc}",
+                          file=sys.stderr)
                 last_full_scan = time.monotonic()
-                print(
-                    f"[{_now_iso()}] Full-Scan: {stats['total']} aktiv, "
-                    f"{stats['new']} neu, {stats['modified']} geändert, "
-                    f"{stats['expired']} abgelaufen, {stats['deleted']} gelöscht"
-                )
                 # Quick-Check-Timer nach Full-Scan zurücksetzen (kein Doppelcheck)
                 last_check = time.monotonic()
 
             elif now - last_check >= config.CHECK_INTERVAL:
-                _run_quick_check(db)
+                try:
+                    _run_quick_check(db)
+                except Exception as exc:
+                    print(f"[{_now_iso()}] Quick-Check fehlgeschlagen: {exc}",
+                          file=sys.stderr)
                 last_check = time.monotonic()
 
             now2 = time.monotonic()

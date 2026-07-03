@@ -179,8 +179,15 @@ def write_caches(locks: list[dict], scanned_at: datetime, config: dict) -> list[
         title = entry.get("name", cache_path.name)
         prefix = entry.get("filter_prefix")
         if prefix:
-            prefix_lower = str(prefix).lower()
-            filtered = [r for r in locks if r["path"].lower().startswith(prefix_lower)]
+            # Match on a path-segment boundary: ".../SOFTWARE" must not also
+            # capture ".../SOFTWARE-ARCHIVE" or ".../SOFTWARE2".
+            prefix_lower = str(prefix).lower().rstrip("\\/")
+            bounded = (prefix_lower + "\\", prefix_lower + "/")
+            filtered = [
+                r for r in locks
+                if r["path"].lower() == prefix_lower
+                or r["path"].lower().startswith(bounded)
+            ]
         else:
             filtered = locks
         cache_path.parent.mkdir(parents=True, exist_ok=True)

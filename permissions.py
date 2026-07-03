@@ -68,17 +68,25 @@ def _arg_matches(action_arg: str | None, rule_arg: str | None) -> bool:
     if rule_arg.strip() in ("**", "*"):
         return True
     if ":" in rule_arg:
-        prefix = rule_arg.split(":", 1)[0].strip()
-        return action_arg.strip().startswith(prefix)
+        # Wortgrenze erzwingen: 'rm:*' matcht 'rm' und 'rm -rf x',
+        # aber NICHT 'rmdir x'.
+        prefix = rule_arg.split(":", 1)[0].strip().casefold()
+        action = action_arg.strip().casefold()
+        return action == prefix or action.startswith(prefix + " ")
+    # fnmatchcase + casefold: identisches Verhalten auf Windows und POSIX
+    # (fnmatch.fnmatch ist unter Windows case-insensitiv, unter POSIX nicht —
+    # dieselbe Regeldatei wuerde je nach System anders entscheiden). Bewusst
+    # ueberall case-INsensitiv, damit Deny-Regeln nicht per Gross-/
+    # Kleinschreibung umgangen werden koennen.
     pattern = rule_arg.replace("**", "*")
-    return fnmatch.fnmatch(action_arg, pattern)
+    return fnmatch.fnmatchcase(action_arg.casefold(), pattern.casefold())
 
 
 def matches(action: str, rule: str) -> bool:
     """True, wenn der Aktions-String von der Regel erfasst wird."""
     a_tool, a_arg = _split(action)
     r_tool, r_arg = _split(rule)
-    if not fnmatch.fnmatch(a_tool, r_tool):
+    if not fnmatch.fnmatchcase(a_tool.casefold(), r_tool.casefold()):
         return False
     return _arg_matches(a_arg, r_arg)
 

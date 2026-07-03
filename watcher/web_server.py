@@ -138,7 +138,32 @@ class WatcherHandler(BaseHTTPRequestHandler):
 
     # ── Routing ────────────────────────────────────────────────
 
+    def _host_allowed(self) -> bool:
+        """Validate the Host header against the loopback addresses we serve.
+
+        Defence against DNS rebinding: a malicious page can point its own
+        hostname at 127.0.0.1 and then read the API same-origin — the only
+        reliable tell is the Host header, which then carries the attacker's
+        hostname instead of a loopback address.
+        """
+        host = _safe_header_value(self.headers.get("Host"))
+        if not host:
+            return False
+        port = self.server.server_port
+        return host in (
+            f"127.0.0.1:{port}", f"localhost:{port}", f"[::1]:{port}",
+            "127.0.0.1", "localhost", "[::1]",
+        )
+
+    def _ensure_host_allowed(self) -> bool:
+        if self._host_allowed():
+            return True
+        self._json_error(403, "Forbidden host")
+        return False
+
     def do_GET(self):
+        if not self._ensure_host_allowed():
+            return
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
         qs = dict(urllib.parse.parse_qsl(parsed.query))
@@ -189,6 +214,8 @@ class WatcherHandler(BaseHTTPRequestHandler):
             self._serve_static(path)
 
     def do_POST(self):
+        if not self._ensure_host_allowed():
+            return
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path.rstrip("/")
         body = self._read_body()
@@ -212,6 +239,8 @@ class WatcherHandler(BaseHTTPRequestHandler):
             self._json_error(404, "Unknown API endpoint")
 
     def do_PUT(self):
+        if not self._ensure_host_allowed():
+            return
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path.rstrip("/")
         body = self._read_body()
@@ -327,7 +356,11 @@ class WatcherHandler(BaseHTTPRequestHandler):
             self._json_error(404, "Room not found")
             return
 
-        limit = int(qs.get("limit", "50"))
+        try:
+            limit = int(qs.get("limit", "50"))
+        except ValueError:
+            self._json_error(400, "Invalid limit")
+            return
         events = self.server.db.get_events_by_prefix(room["abs_path"], limit)
         self._json_response(events)
 

@@ -281,7 +281,7 @@ def write_user_notes(key: str) -> None:
                 claude_md.write_text(wrapped, encoding="utf-8")
         else:
             filename = room.get("notes_filename", "USER-NOTES.md")
-            if not _SAFE_FILENAME_RE.match(filename):
+            if not _SAFE_FILENAME_RE.fullmatch(filename):
                 return
             notes_path = root / filename
             if notes_path.resolve() != (root / filename).resolve():

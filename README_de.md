@@ -19,6 +19,7 @@ lock-master bietet ein leichtgewichtiges, abhängigkeitsfreies Sperrprotokoll au
 | Aktive Sperren über viele Projektbäume sehen | `python lock_scan.py` |
 | Einen schnellen, menschenlesbaren Status veröffentlichen | `python lock_scan.py --write-cache` |
 | Vergessene Sperren sicher entfernen | zuerst `python prune_stale_locks.py --dry-run` |
+| Neue Sperre stempeln statt Template von Hand editieren | `python lock_create.py <projekt> [--scope docs] [--team HOST] [--user] [--condition]` |
 
 ## Auffindbarkeit und Abgrenzung
 

@@ -31,6 +31,27 @@ def test_safe_header_value_blocks_response_splitting():
     assert web_server._safe_header_value("http://127.0.0.1:8095\r\nX-Bad: 1") is None
 
 
+def _handler_stub(host_header: str | None, port: int = 8095):
+    import types
+
+    handler = object.__new__(web_server.WatcherHandler)
+    handler.headers = {} if host_header is None else {"Host": host_header}
+    handler.server = types.SimpleNamespace(server_port=port)
+    return handler
+
+
+def test_host_allowed_accepts_loopback_only():
+    for host in ("127.0.0.1:8095", "localhost:8095", "[::1]:8095",
+                 "127.0.0.1", "localhost"):
+        assert _handler_stub(host)._host_allowed(), host
+
+
+def test_host_allowed_blocks_dns_rebinding_hosts():
+    for host in ("evil.test:8095", "evil.test", "127.0.0.1.evil.test:8095",
+                 "localhost:9999", None, "127.0.0.1:8095\r\nX-Bad: 1"):
+        assert not _handler_stub(host)._host_allowed(), host
+
+
 def test_canonical_allowed_origin_never_reflects_untrusted_header():
     assert web_server._canonical_allowed_origin(8095, "http://127.0.0.1:8095") == (
         "http://127.0.0.1:8095"

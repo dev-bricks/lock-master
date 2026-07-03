@@ -7,6 +7,51 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.4.1] - 2026-07-04
+
+### Fixed
+
+- **Watcher daemon no longer crashes on its first scan.** `watcher/scanner.py`
+  called five `lock_utils` helpers that only existed in a downstream fork of the
+  library, not in this repo (`lock_name_parts`, `lock_type_from_name`,
+  `normalize_lock_fields`, `parse_team_lock_sections`, `compute_expires_at`) —
+  any tree containing a single `LOCK*.txt` killed the daemon with an
+  `AttributeError` within one scan interval. The helpers are now part of
+  `lock_utils.py`, and the daemon loop additionally guards full scans and quick
+  checks so one failing scan can never terminate the process.
+- **Watcher DB accepts user and condition locks.** The `locks` table CHECK
+  constraint only knew `exclusive/team/legacy`, so v1.3.0 user locks and v1.4.0
+  condition locks could never be persisted (`IntegrityError`). New databases use
+  the extended constraint; existing databases are migrated automatically
+  (table rebuild, rows preserved).
+- **Web UI: Host-header validation against DNS rebinding.** All HTTP handlers
+  now verify that the `Host` header is a loopback address (`127.0.0.1`,
+  `localhost`, `[::1]`, with the served port). Previously GET endpoints
+  (`/api/locks`, `/api/room-file/...`, `/api/settings`, ...) were readable by a
+  malicious web page via DNS rebinding; the earlier CORS fix only covered
+  write endpoints.
+- `permissions.py`: rule matching is now platform-consistent and deliberately
+  case-insensitive everywhere (`fnmatchcase` + casefold) — previously the same
+  `LOCK.permissions.json` decided differently on Windows vs. POSIX, and deny
+  rules could be bypassed by letter case on POSIX. Prefix rules (`rm:*`) now
+  respect word boundaries and no longer capture e.g. `rmdir`.
+- `lock_scan.py`: cache `filter_prefix` now matches on path-segment boundaries
+  (`.../SOFTWARE` no longer leaks locks from `.../SOFTWARE-ARCHIVE`).
+- `watcher/rooms.py`: notes filename validation uses `fullmatch` (an embedded
+  trailing newline no longer passes).
+- `watcher/web_server.py`: invalid `limit` query values return 400 instead of
+  an unhandled traceback.
+
+### Added
+
+- `lock_create.py`: convenience script that stamps a new `LOCK*.txt` (exclusive,
+  scoped, team, user, condition) with validation and overwrite protection.
+- GitHub Actions CI (`.github/workflows/tests.yml`): pytest on Python
+  3.10–3.13, Ubuntu + Windows.
+- 19 new tests (suite 45 → 64): scanner/storage regression tests including a
+  CHECK-constraint migration test, host-validation tests, permissions matching
+  tests, cache filter tests, and full `lock_create.py` coverage.
+
 ## [1.4.0] - 2026-07-04
 
 ### Added

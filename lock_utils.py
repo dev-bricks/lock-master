@@ -48,6 +48,57 @@ _DURATION_RE = re.compile(r"^\s*(\d+)\s*([smhd])\s*$", re.IGNORECASE)
 _DURATION_UNITS = {"s": "seconds", "m": "minutes", "h": "hours", "d": "days"}
 
 
+def lock_name_parts(name: str) -> dict[str, str | None | bool] | None:
+    """Split a lock filename into type, scope and host.
+
+    The file location determines the project/room. Scope only means the
+    intra-project component; the markers 'team'/'community'/'user'/'condition'
+    and the host segment are not part of the scope.
+
+    Returns None if the name is not a lock filename at all.
+    """
+    if name in LEGACY_LOCK_NAMES:
+        return {"lock_type": "legacy", "scope": "project", "host": None,
+                "is_legacy": True}
+
+    m = LOCK_RE.match(name)
+    if not m:
+        return None
+
+    raw_scope = m.group(1)
+    if not raw_scope:
+        return {"lock_type": "exclusive", "scope": "project", "host": None,
+                "is_legacy": False}
+
+    segments = raw_scope.split(".")
+    marker = segments[0].lower()
+    if marker in {"team", "community"}:
+        host = segments[-1] if len(segments) >= 2 else None
+        scope_segments = segments[1:-1] if len(segments) >= 3 else []
+        scope = ".".join(scope_segments) if scope_segments else "project"
+        return {"lock_type": "team", "scope": scope, "host": host,
+                "is_legacy": False}
+    if marker in {"user", "condition"}:
+        scope_segments = segments[1:]
+        scope = ".".join(scope_segments) if scope_segments else "project"
+        return {"lock_type": marker, "scope": scope, "host": None,
+                "is_legacy": False}
+    return {"lock_type": "exclusive", "scope": raw_scope, "host": None,
+            "is_legacy": False}
+
+
+def lock_type_from_name(name: str) -> str:
+    """Determine the lock type from the filename.
+
+    'user' for LOCK.user.*, 'condition' for LOCK.condition.*, 'team' for
+    LOCK.team.* and LOCK.community.* (deprecated), 'legacy' for
+    TEST.txt/TESTS.txt, 'exclusive' for all other LOCK*.txt."""
+    parts = lock_name_parts(name)
+    if parts is None:
+        return "exclusive"
+    return str(parts["lock_type"])
+
+
 def scope_from_name(name: str) -> str | None:
     """Derive scope from filename.
 
@@ -173,6 +224,23 @@ def parse_lock_file(lock_path: Path) -> dict[str, str]:
     return data
 
 
+def normalize_lock_fields(data: dict[str, str]) -> dict[str, str]:
+    """Map alternative field names onto canonical names.
+
+    Only safe 1:1 mappings. Started/Expires fields are NOT mapped because
+    third-party formats may use timezone suffixes and absolute timestamps
+    that _parse_created/parse_duration cannot handle. Returns a copy;
+    original keys are preserved."""
+    result = dict(data)
+    field_map = {
+        "task": "purpose",
+    }
+    for old_key, new_key in field_map.items():
+        if old_key in result and new_key not in result:
+            result[new_key] = result[old_key]
+    return result
+
+
 def parse_duration(value: str | None) -> timedelta:
     """'24h'/'90m'/... -> timedelta. Defaults to 24h if missing or unparseable."""
     if not value:
@@ -266,3 +334,85 @@ def active_locks(project_dir: Path, now: datetime | None = None):
         if not is_expired(lock_path, now):
             out.append((name, scope, is_legacy))
     return out
+
+
+# ---------------------------------------------------------------------------
+# Team lock section parsing and absolute expiry (used by the watcher)
+# ---------------------------------------------------------------------------
+
+_SECTION_RE = {
+    "presence": re.compile(
+        r"^(?:#{1,3}\s*)?(?:\d+\.?\s*)?(?:Anwesenheit(?:slog)?|Presence)",
+        re.IGNORECASE,
+    ),
+    "file_claims": re.compile(
+        r"^(?:#{1,3}\s*)?(?:\d+\.?\s*)?(?:Datei|Files?\s+claimed)", re.IGNORECASE
+    ),
+    "tool_claims": re.compile(
+        r"^(?:#{1,3}\s*)?(?:\d+\.?\s*)?(?:Tool|Tools?\s+claimed)", re.IGNORECASE
+    ),
+    "messages": re.compile(
+        r"^(?:#{1,3}\s*)?(?:\d+\.?\s*)?(?:Nachrichten|Notes|Messages)",
+        re.IGNORECASE,
+    ),
+    "queue": re.compile(
+        r"^(?:#{1,3}\s*)?(?:\d+\.?\s*)?(?:Queue|Warteschlange)", re.IGNORECASE
+    ),
+}
+
+
+def parse_team_lock_sections(raw_content: str) -> dict | None:
+    """Parse the structured sections of a team/community lock.
+
+    Returns a dict with the sections, or None when the content has no
+    recognisable team sections. Each section is a list of strings
+    (bullet points / entries)."""
+    if not raw_content:
+        return None
+
+    sections: dict[str, list[str]] = {
+        "presence": [],
+        "file_claims": [],
+        "tool_claims": [],
+        "messages": [],
+        "queue": [],
+    }
+
+    current_section: str | None = None
+
+    for line in raw_content.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+
+        new_section = None
+        for sec_name, pattern in _SECTION_RE.items():
+            if pattern.match(stripped):
+                new_section = sec_name
+                break
+
+        if new_section is not None:
+            current_section = new_section
+            continue
+
+        if current_section is None:
+            continue
+
+        if stripped.startswith("#"):
+            continue
+
+        entry = stripped.lstrip("- ").strip()
+        if entry:
+            sections[current_section].append(entry)
+
+    has_content = any(entries for entries in sections.values())
+    return sections if has_content else None
+
+
+def compute_expires_at(lock_path: Path) -> str | None:
+    """Absolute expiry time as an ISO string, or None if not determinable."""
+    try:
+        created, expires, _ = lock_created_and_expiry(lock_path)
+        return (created + expires).isoformat(timespec="seconds")
+    except (OSError, ValueError):
+        return None
