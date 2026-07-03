@@ -17,6 +17,16 @@
 - [ ] Optional Telegram/webhook notification on lock expiry (prune hook)
 - [ ] GitHub Actions CI: run smoke tests on push
 - [ ] Watcher UI polish after longer real-world daemon runs: empty roots, very large roots, stale daemon messaging, mobile layout
+- [ ] **Drift check 2026-07-03:** `watcher/web_server.py` in the private live instance
+      (`_control-center/_lock_watcher/web_server.py`, ~37.7 KB) has grown well past this
+      mirror's `watcher/web_server.py` (~30.6 KB) since the 2026-06-27 sync: new endpoints for
+      room-stats refresh, bulk-lock/prune wiring and ticket/doc-scanner integration were added.
+      `watcher/config.py` here is intentionally NOT re-synced (it uses a portable
+      `LOCK_MASTER_WATCHER_DATA`/`REPO_ROOT` scheme vs. the private instance's OneDrive-specific
+      parent-walk auto-discovery -- different by design, do not overwrite). Before porting the
+      web_server.py delta: strip anything tied to the private control-center's ticket/doc-scanner
+      paths so the portable copy stays user-neutral. Only `watcher/START.bat`'s auto-open-browser
+      tweak was ported so far (2026-07-03).
 
 ## Ideas / Backlog
 
