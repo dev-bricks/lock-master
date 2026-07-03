@@ -195,6 +195,37 @@ expired.
   `is_prunable()`.
 - Easiest via the watcher GUI ("Locks/Permissions" button) or the template with
   `removable_by: user`.
+- Since v1.4.0, protected locks (user + condition) also never expire in
+  `lock_utils.is_expired()` -- previously a nominally expired user lock could
+  incorrectly drop out of `active_locks()`/`lock_scan.py` output.
+
+### Condition Lock (condition-based, operation-scoped -- released when a condition is met)
+
+Condition Locks (since v1.4.0) hold **until a condition is fulfilled** instead of
+until a time expires, and typically lock **only specific operations** instead of
+the whole project. Use case: "no release/upload of artifact X before the review
+follow-ups are done" -- while normal development/research on the project stays
+unrestricted.
+
+- `LOCK.condition.txt` -- condition-based lock at project level.
+- `LOCK.condition.<scope>.txt` -- condition-based lock for a component,
+  e.g. `LOCK.condition.publish-release.txt`.
+- The `condition` marker segment is reserved (like `user`/`team`). Detection:
+  `lock_utils.is_condition_lock()`; protection: `is_protected_lock()`.
+- **No time expiry:** `expires_after` has no effect; `prune_stale_locks.py` and
+  bulk-unlock never touch condition locks. `lock_scan.py` shows
+  "until condition met: ..." instead of a remaining time.
+- **Required field `release_condition:`** -- state precisely and verifiably WHAT
+  must be done and WHERE it is documented.
+- **Field `operations:`** (comma-separated) names the LOCKED operations
+  (e.g. `operations: publish-release, registry-upload`). Everything not listed
+  remains explicitly allowed. Without an `operations` field the lock applies to
+  the whole scope according to its `mode`. Helper:
+  `lock_utils.locked_operations(path)`.
+- **Release:** unlike user locks, **any agent** may remove the lock once it has
+  verifiably fulfilled the `release_condition` -- document the fulfilment in the
+  project register when removing. If unsure whether the condition is met:
+  do NOT remove; ask the user.
 
 ---
 

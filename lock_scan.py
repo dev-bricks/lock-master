@@ -101,6 +101,11 @@ def collect_locks(config: dict, now: datetime | None = None) -> list[dict]:
             data = lock_utils.parse_lock_file(lock_path)
             if is_legacy:
                 remaining = "legacy"
+            elif lock_utils.is_user_lock(name):
+                remaining = "user-held (no time expiry)"
+            elif lock_utils.is_condition_lock(name):
+                cond = data.get("release_condition", "?")
+                remaining = f"until condition met: {cond}"
             else:
                 remaining = _format_remaining((created + expires) - now)
             out.append({
@@ -111,6 +116,8 @@ def collect_locks(config: dict, now: datetime | None = None) -> list[dict]:
                 "created": created.isoformat(timespec="minutes"),
                 "created_source": source,
                 "expires_after": str(expires),
+                "operations": data.get("operations", ""),
+                "release_condition": data.get("release_condition", ""),
                 "remaining": remaining,
             })
     out.sort(key=lambda r: r["path"])

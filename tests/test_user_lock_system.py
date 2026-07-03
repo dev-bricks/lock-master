@@ -32,7 +32,9 @@ class TestUserLocks(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             ul = Path(tmp) / "LOCK.user.txt"
             ul.write_text(f"owner: user\ncreated: {_old(400)}\nexpires_after: 24h\n", encoding="utf-8")
-            self.assertTrue(lock_utils.is_expired(ul))
+            # v1.4.0: protected locks never expire by time (spec: a user lock
+            # holds until the user removes it, even past its nominal expiry).
+            self.assertFalse(lock_utils.is_expired(ul))
             self.assertFalse(lock_utils.is_prunable(ul))
             nl = Path(tmp) / "LOCK.txt"
             nl.write_text(f"owner: x\ncreated: {_old(2)}\nexpires_after: 24h\n", encoding="utf-8")

@@ -77,6 +77,10 @@ def scope_from_name(name: str) -> str | None:
     if parts[0].lower() == "user":
         scope_segments = parts[1:]
         return ".".join(scope_segments) if scope_segments else "project"
+    # Condition lock: LOCK.condition.txt / LOCK.condition.<scope>.txt.
+    if parts[0].lower() == "condition":
+        scope_segments = parts[1:]
+        return ".".join(scope_segments) if scope_segments else "project"
     return segments
 
 
@@ -100,10 +104,40 @@ def is_user_lock(name: str) -> bool:
     return m.group(1).split(".")[0].lower() == "user"
 
 
+def is_condition_lock(name: str) -> bool:
+    """Return True for LOCK.condition(.<scope>).txt — a condition-based lock.
+
+    Condition locks (since v1.4.0) do NOT expire by time; they remain active
+    until the condition described in the 'release_condition' field is met.
+    The stale-cleanup (prune) and bulk-unlock never touch them. Unlike user
+    locks, ANY agent may remove a condition lock once it has verifiably
+    fulfilled the release condition (and documents that fulfilment when
+    removing the lock). Typical use: operation-scoped locks via the
+    'operations:' field (e.g. 'operations: publish-release'), leaving all
+    other work on the project unrestricted."""
+    m = LOCK_RE.match(name)
+    if not m or not m.group(1):
+        return False
+    return m.group(1).split(".")[0].lower() == "condition"
+
+
 def is_protected_lock(name: str) -> bool:
-    """True if the lock is protected from automatic removal (currently: user locks).
-    Protected locks are never deleted by prune or bulk-unlock actions."""
-    return is_user_lock(name)
+    """True if the lock is protected from automatic removal.
+
+    Protected are user locks (removed only by the user) and condition locks
+    (released by condition, not by time). Protected locks are never deleted
+    by prune or bulk-unlock actions and never expire by time (see is_expired)."""
+    return is_user_lock(name) or is_condition_lock(name)
+
+
+def locked_operations(lock_path: Path) -> list[str]:
+    """Read the 'operations:' field as a list of locked operations.
+
+    Empty list = the lock is not operation-scoped (it locks the whole area
+    according to its mode/type). Non-empty list = ONLY these operations are
+    locked; all other work on the project remains allowed."""
+    raw = parse_lock_file(lock_path).get("operations", "")
+    return [op.strip() for op in raw.split(",") if op.strip()]
 
 
 def is_prunable(lock_path: Path, now: datetime | None = None) -> bool:
@@ -178,6 +212,14 @@ def lock_created_and_expiry(lock_path: Path) -> tuple[datetime, timedelta, str]:
 
 
 def is_expired(lock_path: Path, now: datetime | None = None) -> bool:
+    """Time-based expiry. Protected locks (user locks, condition locks) NEVER
+    expire by time: user locks hold until the user removes them, condition
+    locks hold until their release_condition is fulfilled and the lock is
+    removed. (Fix in v1.4.0: previously a nominally expired user lock could
+    drop out of active_locks() even though the spec defines it as still
+    valid.)"""
+    if is_protected_lock(lock_path.name):
+        return False
     now = now or datetime.now()
     created, expires, _ = lock_created_and_expiry(lock_path)
     return now > created + expires

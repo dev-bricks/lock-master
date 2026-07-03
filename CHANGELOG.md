@@ -7,6 +7,36 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.4.0] - 2026-07-04
+
+### Added
+
+- **Condition Locks** (`LOCK.condition.txt` / `LOCK.condition.<scope>.txt`): condition-based,
+  operation-scoped locks. They do NOT expire by time; they hold until the condition in the
+  required `release_condition:` field is fulfilled. Prune and bulk-unlock never touch them.
+  Unlike user locks, any agent may remove a condition lock once it has verifiably fulfilled
+  the release condition (documenting the fulfilment when removing). New helpers in
+  `lock_utils.py`: `is_condition_lock()`, `locked_operations()`; `scope_from_name()`
+  understands the `condition` marker; `is_protected_lock()` now covers user + condition locks.
+- **`operations:` field** (comma-separated): names the operations a lock forbids
+  (e.g. `operations: publish-release, registry-upload`); everything not listed remains
+  explicitly allowed. Primary use case: block a specific release/upload pipeline until
+  review follow-ups are done, while normal development stays unrestricted.
+- `lock_scan.py` reports type-aware status: `until condition met: ...` for condition
+  locks, `user-held (no time expiry)` for user locks, and exposes `operations` /
+  `release_condition` in JSON output.
+- Test suite: `tests/test_condition_lock_system.py` (naming, protection, no-expiry,
+  active-listing, operations parsing).
+
+### Fixed
+
+- **Protected locks never expire by time** in `lock_utils.is_expired()`: previously a
+  nominally expired user lock dropped out of `active_locks()` / `lock_scan.py` output even
+  though the spec defines user locks as valid until the user removes them. Protected locks
+  (user + condition) now always report as active until removed.
+
+---
+
 ## [1.3.0] - 2026-06-27
 
 ### Added

@@ -168,8 +168,9 @@ Plain text, one `key: value` per line. Lines starting with `#` are comments.
 | `owner`             | yes      | `my-agent`           | Who holds the lock. |
 | `created`           | yes      | `2026-06-14T10:00`   | ISO timestamp; base for expiry calculation. |
 | `host`              | optional | `laptop`, `server`   | Machine that holds the lock (cross-system: which system locked it). |
-| `expires_after`     | optional | `24h`, `90m`, `2d`   | Duration string. Default: `24h`. |
-| `release_condition` | optional | `PR merged`          | Free-text: when can the lock be released. |
+| `expires_after`     | optional | `24h`, `90m`, `2d`   | Duration string. Default: `24h`. No effect on user/condition locks. |
+| `release_condition` | optional* | `PR merged`         | Free-text: when can the lock be released. *Required for condition locks. |
+| `operations`        | optional | `publish-release`    | Comma-separated list of the operations this lock forbids; everything not listed stays allowed. |
 | `mode`              | optional | `hard` \| `soft`     | `hard` = no changes (default); `soft` = reads/hints ok. |
 | `purpose`           | optional | `Adding feature X`   | Free-text description of what is running. |
 | `scope`             | optional | `frontend`           | Informational; the **filename** is authoritative. |
@@ -188,8 +189,17 @@ If `created` is absent or unparseable, the file's mtime is used as fallback.
 | `LOCK.my_scope.txt`               | `my_scope`     | Any freely named sub-area |
 | `LOCK.team.LAPTOP.txt`            | `project`      | Team Lock -- whole project, system `LAPTOP` |
 | `LOCK.team.api.LAPTOP.txt`        | `api`          | Team Lock -- `api` component, system `LAPTOP` |
+| `LOCK.user.txt`                   | `project`      | User Lock -- removed only by the user, no time expiry |
+| `LOCK.condition.publish.txt`      | `publish`      | Condition Lock -- holds until `release_condition` is met, no time expiry |
 
 Detection regex: `^LOCK(\.[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*)?\.txt$` (case-insensitive).
+
+**Condition locks** (v1.4.0) are for gating a *specific operation* on a *condition*
+instead of a time window -- e.g. "no release upload until the review follow-ups are
+merged". They never expire and are never pruned; any agent that verifiably fulfils
+the `release_condition` may remove the lock (documenting the fulfilment). Combine
+with the `operations:` field so that only the gated pipeline is blocked while all
+other work continues. See LOCK-SYSTEM.md for the full rules.
 
 ---
 
