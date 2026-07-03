@@ -21,6 +21,8 @@ timeout /t 2 /nobreak >nul
 powershell -NoProfile -ExecutionPolicy Bypass -Command "try { Invoke-RestMethod -Uri 'http://127.0.0.1:8095/api/stats' -TimeoutSec 1 | Out-Null; exit 0 } catch { exit 1 }" >nul 2>nul
 if %ERRORLEVEL% EQU 0 (
     echo [2/2] Web-Server läuft bereits auf http://127.0.0.1:8095
+    echo Öffne GUI im Browser ...
+    start "" "http://127.0.0.1:8095"
     echo.
     echo Daemon läuft session-übergreifend weiter; kein zweiter Web-Server gestartet.
     echo ========================================
@@ -33,4 +35,6 @@ echo.
 echo Druecke Strg+C zum Beenden des Web-Servers. Der Daemon läuft weiter.
 echo ========================================
 
+:: GUI im Browser öffnen, sobald der Server hochgefahren ist (asynchron, mit kurzer Verzögerung)
+start "" /B powershell -NoProfile -Command "Start-Sleep -Seconds 3; Start-Process 'http://127.0.0.1:8095'"
 python "%DIR%web_server.py" --port 8095
