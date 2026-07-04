@@ -27,11 +27,14 @@
 - [ ] **(Folge)** Watcher-Tests decken weiter nur Helper/Module ab — ein
   Integrationstest, der den HTTP-Server wirklich startet (echte GET/POST gegen
   127.0.0.1), fehlt noch.
-- [ ] **(Folge)** Dieselben Funde in der privaten Live-Instanz
-  (`_control-center/_lock_watcher`) prüfen: deren lock_utils hat die Helper
-  (kein Scanner-Crash), aber CHECK-Constraint und fehlende Host-Validierung
-  stammen aus gemeinsamer Abstammung und sind dort vermutlich AUCH offen.
-  Beim nächsten _lock_watcher-Einsatz portieren.
+- [x] **(Folge — erledigt 2026-07-04, User-Direktive „immer Verbesserungen
+  rückangleichen")** Dieselben Funde in der privaten Live-Instanz
+  (`_control-center/_lock_watcher`) bestätigt und portiert: CHECK-Constraint
+  ohne user/condition (+ Auto-Migration per Table-Rebuild) und fehlende
+  Host-Validierung auf GET/POST/PUT/OPTIONS (DNS-Rebinding). Live verifiziert:
+  Web-Server neu gestartet, `Host: evil.example.com` → 403, Loopback ok;
+  private Suite 146 Tests grün (1 veralteter user-lock-Test an die kanonische
+  v1.4.0-Semantik angeglichen: geschützte Locks laufen zeitbasiert NIE ab).
 
 ## Planned
 
