@@ -27,6 +27,8 @@ import config
 import rooms
 import scanner
 import storage
+import lock_utils  # noqa: E402
+import bulk_lock  # noqa: E402
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 DEFAULT_PORT = 8095
@@ -231,6 +233,10 @@ class WatcherHandler(BaseHTTPRequestHandler):
             "/api/room-file": self._write_room_file,
             "/api/swap-central-file": self._swap_central_file,
             "/api/room-stats/refresh": self._refresh_room_stats,
+            "/api/user-lock": self._create_user_lock,
+            "/api/user-lock/remove": self._remove_user_lock,
+            "/api/bulk-lock": self._bulk_lock,
+            "/api/bulk-unlock": self._bulk_unlock,
         }
 
         if path in routes:
@@ -440,6 +446,112 @@ class WatcherHandler(BaseHTTPRequestHandler):
             return
 
         self._json_response({"created": lock_path, "filename": filename}, status=201)
+
+    def _resolve_project_dir(self, value: str) -> str | None:
+        """Normalize + validate a project path (must live under a configured root)."""
+        project_path = os.path.normpath(value.strip())
+        if not rooms.is_path_in_roots(project_path):
+            return None
+        return project_path
+
+    def _create_user_lock(self, body: dict):
+        """Create a user lock (LOCK.user(.<scope>).txt) -- only the user removes it."""
+        project_dir = body.get("project_dir", "").strip()
+        if not project_dir:
+            self._json_error(400, "project_dir required")
+            return
+        project_path = self._resolve_project_dir(project_dir)
+        if project_path is None:
+            self._json_error(403, "Path outside allowed roots")
+            return
+        if not os.path.isdir(project_path):
+            self._json_error(404, "Directory not found")
+            return
+
+        scope = body.get("scope", "").strip()
+        if scope and scope != "project":
+            if not _SCOPE_RE.match(scope):
+                self._json_error(400, "Invalid scope (only A-Z, a-z, 0-9, _, -)")
+                return
+            filename = f"LOCK.user.{scope}.txt"
+        else:
+            filename = "LOCK.user.txt"
+
+        lock_path = os.path.join(project_path, filename)
+        if os.path.exists(lock_path):
+            self._json_error(409, f"{filename} already exists")
+            return
+
+        profile = _load_user_profile()
+        owner = body.get("owner", profile.get("name", "User (Web UI)")).strip()
+        purpose = body.get("purpose", "").strip()
+        host = socket.gethostname()
+        now = datetime.now().strftime("%Y-%m-%dT%H:%M")
+
+        lines = [f"owner: {owner}", f"created: {now}", f"host: {host}"]
+        if purpose:
+            lines.append(f"purpose: {purpose}")
+        if scope and scope != "project":
+            lines.append(f"scope: {scope}")
+
+        try:
+            with Path(lock_path).open("x", encoding="utf-8") as f:
+                f.write("\n".join(lines) + "\n")
+        except FileExistsError:
+            self._json_error(409, f"{filename} already exists")
+            return
+        except OSError as exc:
+            self._json_error(500, f"Failed to write user-lock: {exc}")
+            return
+
+        self._json_response({"created": lock_path, "filename": filename}, status=201)
+
+    def _remove_user_lock(self, body: dict):
+        """Remove a user lock. Via the GUI this counts as the 'user' channel (allowed)."""
+        project_dir = body.get("project_dir", "").strip()
+        project_path = self._resolve_project_dir(project_dir) if project_dir else None
+        if project_path is None:
+            self._json_error(403, "Path outside allowed roots")
+            return
+        scope = body.get("scope", "").strip()
+        filename = f"LOCK.user.{scope}.txt" if scope and scope != "project" else "LOCK.user.txt"
+        if not lock_utils.is_user_lock(filename):
+            self._json_error(400, "Not a user-lock filename")
+            return
+        target = Path(project_path) / filename
+        if not target.exists():
+            self._json_error(404, f"{filename} not found")
+            return
+        try:
+            target.unlink()
+        except OSError as exc:
+            self._json_error(500, f"Failed to remove user-lock: {exc}")
+            return
+        self._json_response({"removed": str(target)})
+
+    def _bulk_lock(self, body: dict):
+        """Immediately lock all connected roots. 'commit' must be explicitly true."""
+        commit = bool(body.get("commit", False))
+        owner = body.get("owner", _load_user_profile().get("name", "User")).strip()
+        reason = body.get("reason", "Bulk lockdown").strip()
+        try:
+            roots = bulk_lock._load_roots_from_config()
+            res = bulk_lock.bulk_lock(roots, owner=owner, reason=reason, commit=commit)
+        except Exception as exc:
+            self._json_error(500, f"Bulk-lock failed: {exc}")
+            return
+        self._json_response(res)
+
+    def _bulk_unlock(self, body: dict):
+        """Lift a bulk lockdown (only bulk-created locks, never user-locks)."""
+        commit = bool(body.get("commit", False))
+        try:
+            roots = bulk_lock._load_roots_from_config()
+            res = bulk_lock.bulk_unlock(roots, commit=commit)
+        except Exception as exc:
+            self._json_error(500, f"Bulk-unlock failed: {exc}")
+            return
+        self._json_response(res)
 
     def _trigger_scan(self, body: dict):
         try:

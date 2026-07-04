@@ -43,16 +43,18 @@
 - [ ] Optional Telegram/webhook notification on lock expiry (prune hook)
 - [x] GitHub Actions CI: run smoke tests on push (done 2026-07-04: pytest-Matrix 3.10–3.13 auf ubuntu+windows)
 - [ ] Watcher UI polish after longer real-world daemon runs: empty roots, very large roots, stale daemon messaging, mobile layout
-- [ ] **Drift check 2026-07-03:** `watcher/web_server.py` in the private live instance
-      (`_control-center/_lock_watcher/web_server.py`, ~37.7 KB) has grown well past this
-      mirror's `watcher/web_server.py` (~30.6 KB) since the 2026-06-27 sync: new endpoints for
-      room-stats refresh, bulk-lock/prune wiring and ticket/doc-scanner integration were added.
-      `watcher/config.py` here is intentionally NOT re-synced (it uses a portable
-      `LOCK_MASTER_WATCHER_DATA`/`REPO_ROOT` scheme vs. the private instance's OneDrive-specific
-      parent-walk auto-discovery -- different by design, do not overwrite). Before porting the
-      web_server.py delta: strip anything tied to the private control-center's ticket/doc-scanner
-      paths so the portable copy stays user-neutral. Only `watcher/START.bat`'s auto-open-browser
-      tweak was ported so far (2026-07-03).
+- [x] **Drift check 2026-07-03, closed 2026-07-04 (T-20260704-05 audit):** Ported the
+      user-neutral part of the private live instance's web_server.py delta: `/api/user-lock`,
+      `/api/user-lock/remove` (create/remove `LOCK.user(.<scope>).txt` via the GUI channel) and
+      `/api/bulk-lock`, `/api/bulk-unlock` (wired to the already-present `bulk_lock.py`, minus a
+      private event-logging side-call with no equivalent here). Room-stats-refresh was already
+      in sync. Intentionally NOT ported: a ticket-intake endpoint and a project-docs endpoint --
+      both tied to private, user-specific tracking systems, not generic. `watcher/config.py`
+      stays divergent by design (portable `LOCK_MASTER_WATCHER_DATA`/`REPO_ROOT` vs. private
+      auto-discovery).
+- [ ] **Follow-up (medium):** `watcher/static/` has no UI for the new bulk-lock/user-lock
+      endpoints yet (private instance's `static/app.js` has buttons/handlers for both); the
+      backend routes above are usable via direct API calls but not yet from the Web UI.
 
 ## Ideas / Backlog
 
