@@ -338,3 +338,34 @@ and `skip_dirs` (directories skipped including their subtrees, e.g.
 `is_protected_lock`, `is_prunable`). Import it from your own scripts rather than
 re-implementing the logic. Companion modules: `permissions.py` (LOCK.permissions
 evaluation) and `bulk_lock.py` (immediate lockdown / reversal).
+
+
+---
+
+## PRIVATE.txt / PUBLIC.txt — Veröffentlichungs-Locks [U 2026-07-18, Rückspiegelung aus _scripts/LOCK-SYSTEM.md]
+
+Zwei besondere Lock-Arten für die VERÖFFENTLICHUNG (nicht Bearbeitung) von
+Repositories/Projekten; kanonische Vollfassung: `OneDrive/_scripts/LOCK-SYSTEM.md`.
+
+**`PRIVATE.txt`** im lokalen Projekt-/Repo-Root = Projekt darf NICHT public
+werden (GitHub-Visibility, Forks/Mirrors, Registries, Zenodo/Preprints,
+öffentliche Doku). Aufhebung: LEERE Datei → nur der User entfernt sie, kein
+Verfall, kein prune. MIT INHALT können Blocker/Aufhebebedingungen definiert
+sein — sind alle nachweislich erfüllt, darf auch ein LLM/Agent die Datei
+löschen (mit dokumentiertem Nachweis); ohne explizite Bedingungen gilt sie
+wie leer. Pflichtprüfung vor `gh repo create --public`, `--visibility
+public`, `npm publish`, Registry-Submits; GithubBot//repo-publish-check
+behandeln solche Projekte als „nie public stellen/vorschlagen".
+
+**`PUBLIC.txt`** = Veröffentlichung FREIGEGEBEN (auch wenn noch nicht
+public); kann Aufträge enthalten, die MIT der Veröffentlichung zu erledigen
+sind (Registries, Banner, llms.txt, Release-Tag …). Anlage nur durch den
+User oder auf dokumentierte User-Freigabe.
+
+**Gemeinsame Regeln:** Beide Dateien sind lokale Steuerdateien und werden
+NICHT committet (in Projekt-`.gitignore` eintragen; Bots prüfen den lokalen
+Projektspiegel). Konflikt beider Dateien → fail-closed PRIVATE.txt gilt,
+User informieren. Bewusst außerhalb des `LOCK*.txt`-Scanmusters von
+`lock_scan.py` (Publikations-, keine Bearbeitungssperre). Anlass: ein
+internes Repository wurde ohne User-Freigabe public angelegt und am
+2026-07-18 auf privat zurückgestellt.
