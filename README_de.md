@@ -330,6 +330,17 @@ lock-master/
 
 ---
 
+## Teil der ellmos-Stack-Familie
+
+lock-master ist bewusst beides: ein eigenständiges Dev-Tool und ein Kernmodul
+der ellmos-Stack-Familie.
+
+Kernmodul von [ellmos-ai/agent-ops-stack](https://github.com/ellmos-ai/agent-ops-stack)
+(Rolle `locking`); Familie/Katalog: [ellmos-ai/stacks](https://github.com/ellmos-ai/stacks);
+Org-Übersicht: [ellmos-ai](https://github.com/ellmos-ai).
+
+---
+
 ## Lizenz
 
 MIT -- Copyright (c) 2026 Lukas Geiger. Siehe [LICENSE](LICENSE).
