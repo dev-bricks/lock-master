@@ -7,6 +7,14 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.4.2] - 2026-07-25
+
+### Added & Improved
+
+- **Pyproject Metadata**: Added standardized `pyproject.toml` (PEP 621) with package metadata, URLs, keywords, and `pytest` configuration (`[tool.pytest.ini_options]`).
+- **Discoverability & Badges**: Added Shields.io badges (Python, License, Multi-Agent Lock Protocol, LLM Indexing) and LLM indexing callouts (`> [!NOTE]`) to `README.md` and `README_de.md`.
+- **LLM Index Refresh**: Updated `llms.txt` header timestamp to `2026-07-25`.
+
 ## [1.4.1] - 2026-07-04
 
 ### Fixed
