@@ -49,10 +49,10 @@
       `/api/bulk-lock`, `/api/bulk-unlock` (wired to the already-present `bulk_lock.py`, minus a
       private event-logging side-call with no equivalent here). Room-stats-refresh was already
       in sync. Intentionally NOT ported: a ticket-intake endpoint and a project-docs endpoint --
-      both tied to private, user-specific tracking systems, not generic. `watcher/config.py`
+      both tied to private, user-specific tracking systems, not generic. `pure-locking/watcher/config.py`
       stays divergent by design (portable `LOCK_MASTER_WATCHER_DATA`/`REPO_ROOT` vs. private
       auto-discovery).
-- [ ] **Follow-up (medium):** `watcher/static/` has no UI for the new bulk-lock/user-lock
+- [ ] **Follow-up (medium):** `pure-locking/watcher/static/` has no UI for the new bulk-lock/user-lock
       endpoints yet (private instance's `static/app.js` has buttons/handlers for both); the
       backend routes above are usable via direct API calls but not yet from the Web UI.
 
@@ -60,7 +60,7 @@
 
 - [ ] `lock_status.py` -- per-project status check (exit 0 = no lock, exit 1 = locked)
 - [ ] Integration example for cron-based stale cleanup
-- [ ] Optional installer/launcher wrapper for `watcher/` on non-Windows systems
+- [ ] Optional installer/launcher wrapper for `pure-locking/watcher/` on non-Windows systems
 
 ## Done
 

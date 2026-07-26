@@ -27,17 +27,17 @@ lock-master 提供了一个基于纯文本文件的轻量级、零依赖锁定�
 ### 1. 复制脚本
 
 ```
-lock_utils.py
-lock_scan.py
-prune_stale_locks.py
-LOCK_TEMPLATE.txt
+pure-locking/lock_utils.py
+pure-locking/lock_scan.py
+pure-locking/prune_stale_locks.py
+pure-locking/LOCK_TEMPLATE.txt
 ```
 
 将它们放置在您选择的目录中（例如 `scripts/`）。
 
 ### 2. 创建 `lock_roots.json`
 
-复制 `lock_roots.example.json`，将其重命名为 `lock_roots.json`，并将占位符路径替换为您的实际项目根目录。该文件因包含本地绝对路径而被 `.gitignore` 排除在版本控制之外。
+复制 `pure-locking/lock_roots.example.json`，将其重命名为 `lock_roots.json`，并将占位符路径替换为您的实际项目根目录。该文件因包含本地绝对路径而被 `.gitignore` 排除在版本控制之外。
 
 ```json
 {
@@ -60,7 +60,7 @@ LOCK_TEMPLATE.txt
 
 ### 3. 创建锁
 
-将 `LOCK_TEMPLATE.txt` 复制到您的项目目录，填写各字段，然后将其重命名为 `LOCK.txt`（或用于组件级锁定的 `LOCK.<scope>.txt`）：
+将 `pure-locking/LOCK_TEMPLATE.txt` 复制到您的项目目录，填写各字段，然后将其重命名为 `LOCK.txt`（或用于组件级锁定的 `LOCK.<scope>.txt`）：
 
 ```
 owner: my-agent
@@ -202,11 +202,12 @@ python -m pytest tests/ -v
 
 ```
 lock-master/
-├── lock_utils.py           # 核心库：解析、范围、过期处理
-├── lock_scan.py            # CLI：列出活跃锁，写入缓存
-├── prune_stale_locks.py    # CLI：删除过期锁
-├── LOCK_TEMPLATE.txt       # 创建新锁的模板
-├── lock_roots.example.json # 带注释的示例配置
+├── pure-locking/
+│   ├── lock_utils.py           # 核心库：解析、范围、过期处理
+│   ├── lock_scan.py            # CLI：列出活跃锁，写入缓存
+│   ├── prune_stale_locks.py    # CLI：删除过期锁
+│   ├── LOCK_TEMPLATE.txt       # 创建新锁的模板
+│   └── lock_roots.example.json # 带注释的示例配置
 ├── LOCK-SYSTEM.md          # 规范说明与生命周期参考
 ├── tests/
 │   └── test_smoke.py       # 冒烟测试

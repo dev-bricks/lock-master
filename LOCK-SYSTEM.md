@@ -33,8 +33,8 @@ derived quick-index only.
 
 ## Optional Watcher / Web UI
 
-`watcher/` provides an optional local daemon, REST API, and browser UI. It uses
-the same repository-root scripts and config:
+`pure-locking/watcher/` provides an optional local daemon, REST API, and browser
+UI. It uses the same scripts and config from `pure-locking/`:
 
 - `lock_roots.json`
 - `lock_scan.py`
@@ -57,14 +57,14 @@ Override with `LOCK_MASTER_WATCHER_DATA=/path/to/runtime`.
 Start from the repository root:
 
 ```bash
-python watcher/lock_watcher.py --update-cache
-python watcher/web_server.py --port 8095
+python pure-locking/watcher/lock_watcher.py --update-cache
+python pure-locking/watcher/web_server.py --port 8095
 ```
 
 Windows shortcut:
 
 ```bat
-watcher\START.bat
+pure-locking\watcher\START.bat
 ```
 
 Open `http://127.0.0.1:8095`. The web server is intended for local use only.
@@ -99,7 +99,7 @@ Watcher scan model:
 
 ## File Format (one setting per line, `key: value`)
 
-Template: `LOCK_TEMPLATE.txt`. Lines starting with `#` = comment; blank lines
+Template: `pure-locking/LOCK_TEMPLATE.txt`. Lines starting with `#` = comment; blank lines
 are ignored.
 
 | Field              | Required | Meaning |
@@ -156,7 +156,7 @@ is atomic and can be used as a lightweight claim mechanism.
 
 ### Required content of a Team Lock file
 
-A Team Lock must contain all four sections (use `TEAM_LOCK_TEMPLATE.txt`):
+A Team Lock must contain all four sections (use `pure-locking/TEAM_LOCK_TEMPLATE.txt`):
 
 1. **Presence log** -- loop ID, agent name, role, main task, start time.
    Every agent checks in here before working; removes its entry when done.
@@ -245,9 +245,9 @@ Syntax borrowed from `.claude/settings.json`, but agent-wide and folder-scoped:
 ```
 
 - Patterns: `Tool(glob)` (`Bash(...)`, `Read(...)`, `Write(...)`), `mcp__vendor__tool`, `*`.
-- Precedence: `deny > ask > allow > default`. Evaluation: `permissions.py::evaluate(perm, agent, action)`.
+- Precedence: `deny > ask > allow > default`. Evaluation: `permission-control/permissions.py::evaluate(perm, agent, action)`.
 - Enforcement = voluntary convention + GUI/audit (like `LOCK*.txt`). Template:
-  `LOCK_PERMISSIONS_TEMPLATE.json`.
+  `permission-control/LOCK_PERMISSIONS_TEMPLATE.json`.
 
 ### Immediate lockdown (central kill switch)
 

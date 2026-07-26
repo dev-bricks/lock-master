@@ -48,22 +48,44 @@ Azure DevOps branch locking, Redis mutex libraries, database row locks, or cloud
 file-sharing APIs. For accurate results, search with `dev-bricks`, `LOCK*.txt`,
 `Codex`, `Claude Code`, or `multi-agent`.
 
+## Repository layout
+
+Since 2026-07-26 this repository is a stack of three sub-modules, shipped as one
+module. Each sub-module has its own `ellmos-module.v2.json` and README stating
+what a partial extraction does *not* include.
+
+- `pure-locking/` -- the locking itself: `LOCK*.txt` create, scan, prune, bulk,
+  plus the optional `watcher/`.
+- `permission-control/` -- the `LOCK.permissions.json` rule scheme.
+- `team-lock/` -- placeholder, no code yet (atomic `O_EXCL` claims, planned).
+
+The flat entry points in the repository root still work unchanged
+(`python lock_scan.py`, `import lock_utils`): the root holds compatibility
+shims that load the real modules from `pure-locking/` and `permission-control/`.
+
 ## Core files
 
-- `lock_utils.py` -- library: parse LOCK files, detect scope from filename,
-  check expiry. Zero dependencies beyond the Python standard library.
-- `lock_scan.py` -- CLI: scan all roots, list active locks, write Markdown
-  cache(s). Read-only by default.
-- `prune_stale_locks.py` -- CLI: remove expired LOCK*.txt files. Supports
-  `--dry-run`.
-- `LOCK_TEMPLATE.txt` -- template to copy when creating a new lock.
-- `lock_roots.json` (user-created, not in repo) -- lists which directories to
-  scan, depth limits, skip-dirs, and optional cache output targets.
-- `lock_roots.example.json` -- annotated example with placeholder paths.
+- `pure-locking/lock_utils.py` -- library: parse LOCK files, detect scope from
+  filename, check expiry. Zero dependencies beyond the Python standard library.
+- `pure-locking/lock_scan.py` -- CLI: scan all roots, list active locks, write
+  Markdown cache(s). Read-only by default.
+- `pure-locking/prune_stale_locks.py` -- CLI: remove expired LOCK*.txt files.
+  Supports `--dry-run`.
+- `pure-locking/LOCK_TEMPLATE.txt` -- template to copy when creating a new lock.
+- `pure-locking/lock_roots.json` (user-created, not in repo) -- lists which
+  directories to scan, depth limits, skip-dirs, and optional cache output
+  targets.
+- `pure-locking/lock_roots.example.json` -- annotated example with placeholder
+  paths.
+- `permission-control/permissions.py` -- library: evaluate an action against
+  `LOCK.permissions.json` (`deny` > `ask` > `allow` > default).
 - `LOCK-SYSTEM.md` -- canonical spec: file format, scope convention, lifecycle,
   script reference.
-- `watcher/` -- optional localhost daemon, REST API, and Web UI. Runtime data
-  defaults to `~/.lock_master_watcher` and the UI binds to `127.0.0.1`.
+- `pure-locking/watcher/` -- optional localhost daemon, REST API, and Web UI.
+  Runtime data defaults to `~/.lock_master_watcher` and the UI binds to
+  `127.0.0.1`.
+- `KONZEPT-ZERLEGUNG.md` -- why the stack is split, and what deliberately was
+  not solved along with it.
 
 ## Lock file format
 
@@ -98,13 +120,13 @@ Requires Python 3.10+ (uses `str | None` union syntax).
 Start from the repository root:
 
 ```
-python watcher/lock_watcher.py --update-cache
-python watcher/web_server.py --port 8095
+python pure-locking/watcher/lock_watcher.py --update-cache
+python pure-locking/watcher/web_server.py --port 8095
 ```
 
 Open `http://127.0.0.1:8095`. The watcher uses the same `lock_roots.json`,
-`lock_scan.py`, `lock_utils.py`, and `prune_stale_locks.py`; `LOCK*.txt` files
-remain the authoritative source of truth.
+`lock_scan.py`, `lock_utils.py`, and `prune_stale_locks.py` from
+`pure-locking/`; `LOCK*.txt` files remain the authoritative source of truth.
 
 ## License
 

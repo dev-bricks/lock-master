@@ -27,17 +27,17 @@ lock-master предоставляет лёгкий протокол блоки�
 ### 1. Скопировать скрипты
 
 ```
-lock_utils.py
-lock_scan.py
-prune_stale_locks.py
-LOCK_TEMPLATE.txt
+pure-locking/lock_utils.py
+pure-locking/lock_scan.py
+pure-locking/prune_stale_locks.py
+pure-locking/LOCK_TEMPLATE.txt
 ```
 
 Поместите их в директорию по вашему выбору (например, `scripts/`).
 
 ### 2. Создать `lock_roots.json`
 
-Скопируйте `lock_roots.example.json`, переименуйте его в `lock_roots.json` и замените пути-заглушки на реальные корневые директории проектов. Файл исключён из системы контроля версий через `.gitignore` (он содержит локальные абсолютные пути).
+Скопируйте `pure-locking/lock_roots.example.json`, переименуйте его в `lock_roots.json` и замените пути-заглушки на реальные корневые директории проектов. Файл исключён из системы контроля версий через `.gitignore` (он содержит локальные абсолютные пути).
 
 ```json
 {
@@ -60,7 +60,7 @@ LOCK_TEMPLATE.txt
 
 ### 3. Создать блокировку
 
-Скопируйте `LOCK_TEMPLATE.txt` в директорию проекта, заполните поля и переименуйте файл в `LOCK.txt` (или `LOCK.<scope>.txt` для блокировки уровня компонента):
+Скопируйте `pure-locking/LOCK_TEMPLATE.txt` в директорию проекта, заполните поля и переименуйте файл в `LOCK.txt` (или `LOCK.<scope>.txt` для блокировки уровня компонента):
 
 ```
 owner: мой-агент
@@ -202,11 +202,12 @@ python -m pytest tests/ -v
 
 ```
 lock-master/
-├── lock_utils.py           # Основная библиотека: разбор, область, истечение срока
-├── lock_scan.py            # CLI: список активных блокировок, запись кэша
-├── prune_stale_locks.py    # CLI: удаление истёкших блокировок
-├── LOCK_TEMPLATE.txt       # Шаблон для создания новой блокировки
-├── lock_roots.example.json # Пример конфигурации с аннотациями
+├── pure-locking/
+│   ├── lock_utils.py           # Основная библиотека: разбор, область, истечение срока
+│   ├── lock_scan.py            # CLI: список активных блокировок, запись кэша
+│   ├── prune_stale_locks.py    # CLI: удаление истёкших блокировок
+│   ├── LOCK_TEMPLATE.txt       # Шаблон для создания новой блокировки
+│   └── lock_roots.example.json # Пример конфигурации с аннотациями
 ├── LOCK-SYSTEM.md          # Каноническая спецификация и справочник жизненного цикла
 ├── tests/
 │   └── test_smoke.py       # Дымовые тесты

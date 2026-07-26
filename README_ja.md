@@ -27,17 +27,17 @@ lock-masterは、プレーンテキストファイルに基づく、軽量でゼ
 ### 1. スクリプトをコピーする
 
 ```
-lock_utils.py
-lock_scan.py
-prune_stale_locks.py
-LOCK_TEMPLATE.txt
+pure-locking/lock_utils.py
+pure-locking/lock_scan.py
+pure-locking/prune_stale_locks.py
+pure-locking/LOCK_TEMPLATE.txt
 ```
 
 任意のディレクトリ（例: `scripts/`）に配置してください。
 
 ### 2. `lock_roots.json`を作成する
 
-`lock_roots.example.json`をコピーし、`lock_roots.json`にリネームして、プレースホルダーのパスを実際のプロジェクトルートに置き換えます。このファイルはローカルの絶対パスを含むため、`.gitignore`によってバージョン管理から除外されます。
+`pure-locking/lock_roots.example.json`をコピーし、`lock_roots.json`にリネームして、プレースホルダーのパスを実際のプロジェクトルートに置き換えます。このファイルはローカルの絶対パスを含むため、`.gitignore`によってバージョン管理から除外されます。
 
 ```json
 {
@@ -60,7 +60,7 @@ LOCK_TEMPLATE.txt
 
 ### 3. ロックを作成する
 
-`LOCK_TEMPLATE.txt`をプロジェクトディレクトリにコピーし、フィールドを記入してから`LOCK.txt`（またはコンポーネントレベルのロックには`LOCK.<scope>.txt`）にリネームします:
+`pure-locking/LOCK_TEMPLATE.txt`をプロジェクトディレクトリにコピーし、フィールドを記入してから`LOCK.txt`（またはコンポーネントレベルのロックには`LOCK.<scope>.txt`）にリネームします:
 
 ```
 owner: my-agent
@@ -202,11 +202,12 @@ python -m pytest tests/ -v
 
 ```
 lock-master/
-├── lock_utils.py           # コアライブラリ: 解析、スコープ、期限切れ
-├── lock_scan.py            # CLI: アクティブなロックのリストアップ、キャッシュの書き込み
-├── prune_stale_locks.py    # CLI: 期限切れのロックの削除
-├── LOCK_TEMPLATE.txt       # 新しいロックを作成するためのテンプレート
-├── lock_roots.example.json # 注釈付きの設定例
+├── pure-locking/
+│   ├── lock_utils.py           # コアライブラリ: 解析、スコープ、期限切れ
+│   ├── lock_scan.py            # CLI: アクティブなロックのリストアップ、キャッシュの書き込み
+│   ├── prune_stale_locks.py    # CLI: 期限切れのロックの削除
+│   ├── LOCK_TEMPLATE.txt       # 新しいロックを作成するためのテンプレート
+│   └── lock_roots.example.json # 注釈付きの設定例
 ├── LOCK-SYSTEM.md          # 正式な仕様とライフサイクルリファレンス
 ├── tests/
 │   └── test_smoke.py       # スモークテスト

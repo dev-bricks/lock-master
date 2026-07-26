@@ -27,17 +27,17 @@ lock-master ofrece un protocolo de bloqueo ligero y sin dependencias basado en a
 ### 1. Copiar los scripts
 
 ```
-lock_utils.py
-lock_scan.py
-prune_stale_locks.py
-LOCK_TEMPLATE.txt
+pure-locking/lock_utils.py
+pure-locking/lock_scan.py
+pure-locking/prune_stale_locks.py
+pure-locking/LOCK_TEMPLATE.txt
 ```
 
 Colócalos en el directorio de tu elección (p. ej. `scripts/`).
 
 ### 2. Crear `lock_roots.json`
 
-Copia `lock_roots.example.json`, renómbralo a `lock_roots.json` y sustituye las rutas de marcador de posición por las rutas reales de tus proyectos. El archivo está excluido del control de versiones mediante `.gitignore` (contiene rutas absolutas locales).
+Copia `pure-locking/lock_roots.example.json`, renómbralo a `lock_roots.json` y sustituye las rutas de marcador de posición por las rutas reales de tus proyectos. El archivo está excluido del control de versiones mediante `.gitignore` (contiene rutas absolutas locales).
 
 ```json
 {
@@ -60,7 +60,7 @@ Copia `lock_roots.example.json`, renómbralo a `lock_roots.json` y sustituye las
 
 ### 3. Crear un bloqueo
 
-Copia `LOCK_TEMPLATE.txt` en el directorio de tu proyecto, rellena los campos y renómbralo a `LOCK.txt` (o `LOCK.<scope>.txt` para bloqueos a nivel de componente):
+Copia `pure-locking/LOCK_TEMPLATE.txt` en el directorio de tu proyecto, rellena los campos y renómbralo a `LOCK.txt` (o `LOCK.<scope>.txt` para bloqueos a nivel de componente):
 
 ```
 owner: mi-agente
@@ -202,11 +202,12 @@ Requiere `pytest` (`pip install pytest`).
 
 ```
 lock-master/
-├── lock_utils.py           # Librería principal: parseo, scope, expiración
-├── lock_scan.py            # CLI: listar bloqueos activos, escribir caché
-├── prune_stale_locks.py    # CLI: eliminar bloqueos expirados
-├── LOCK_TEMPLATE.txt       # Plantilla para crear un nuevo bloqueo
-├── lock_roots.example.json # Ejemplo de configuración con anotaciones
+├── pure-locking/
+│   ├── lock_utils.py           # Librería principal: parseo, scope, expiración
+│   ├── lock_scan.py            # CLI: listar bloqueos activos, escribir caché
+│   ├── prune_stale_locks.py    # CLI: eliminar bloqueos expirados
+│   ├── LOCK_TEMPLATE.txt       # Plantilla para crear un nuevo bloqueo
+│   └── lock_roots.example.json # Ejemplo de configuración con anotaciones
 ├── LOCK-SYSTEM.md          # Especificación canónica y referencia del ciclo de vida
 ├── tests/
 │   └── test_smoke.py       # Pruebas de humo

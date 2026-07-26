@@ -62,7 +62,7 @@ graph TD
 - **Read-only-Scan:** `lock_scan.py` listet alle aktiven Sperren über alle konfigurierten Roots, ohne Dateien zu verändern.
 - **Markdown-Cache:** `lock_scan.py --write-cache` schreibt eine `LOCK-CACHE.md` für einen schnellen Überblick ohne Scan.
 - **Dry-run-Prune:** `prune_stale_locks.py --dry-run` zeigt vorab, was entfernt würde.
-- **Optionale lokale Watcher-UI:** `watcher/` ergänzt Daemon, REST-API und Browser-UI auf localhost für Live-Status, Raumkarte, Verlauf, Userlocks und Prune-Aktionen.
+- **Optionale lokale Watcher-UI:** `pure-locking/watcher/` ergänzt Daemon, REST-API und Browser-UI auf localhost für Live-Status, Raumkarte, Verlauf, Userlocks und Prune-Aktionen.
 - **Keine Abhängigkeiten:** reine Python-Standardbibliothek (3.10+).
 - **Config-gesteuert:** alle Roots, Tiefenbegrenzungen, Skip-Verzeichnisse und Cache-Ziele liegen in `lock_roots.json` -- keine hartkodierten Pfade im Code.
 
@@ -72,18 +72,24 @@ graph TD
 
 ### 1. Scripts kopieren
 
+Alles, was reines Sperren braucht, liegt in `pure-locking/`:
+
 ```
-lock_utils.py
-lock_scan.py
-prune_stale_locks.py
-LOCK_TEMPLATE.txt
+pure-locking/lock_utils.py
+pure-locking/lock_scan.py
+pure-locking/prune_stale_locks.py
+pure-locking/LOCK_TEMPLATE.txt
 ```
 
-In ein Verzeichnis deiner Wahl legen (z. B. `scripts/`).
+In ein Verzeichnis deiner Wahl legen (z. B. `scripts/`). Die Dateien importieren
+einander flach, müssen also nebeneinander liegen.
+
+Was bei einer Teilentnahme **fehlt**, steht in
+[pure-locking/README.md](pure-locking/README.md).
 
 ### 2. `lock_roots.json` erstellen
 
-`lock_roots.example.json` kopieren, zu `lock_roots.json` umbenennen und die Platzhalter-Pfade durch echte Projektpfade ersetzen. Die Datei wird von `.gitignore` ausgeschlossen (sie enthält lokale absolute Pfade).
+`pure-locking/lock_roots.example.json` kopieren, zu `lock_roots.json` umbenennen und die Platzhalter-Pfade durch echte Projektpfade ersetzen. Die Datei wird von `.gitignore` ausgeschlossen (sie enthält lokale absolute Pfade).
 
 ```json
 {
@@ -106,7 +112,7 @@ In ein Verzeichnis deiner Wahl legen (z. B. `scripts/`).
 
 ### 3. Sperre anlegen
 
-`LOCK_TEMPLATE.txt` in den Projektordner kopieren, Felder ausfüllen und in `LOCK.txt` (oder `LOCK.<scope>.txt` für Komponenten-Sperren) umbenennen:
+`pure-locking/LOCK_TEMPLATE.txt` in den Projektordner kopieren, Felder ausfüllen und in `LOCK.txt` (oder `LOCK.<scope>.txt` für Komponenten-Sperren) umbenennen:
 
 ```
 owner: mein-agent
@@ -146,21 +152,21 @@ Schreibt `LOCK-CACHE.md` gemäß den Einträgen im `"caches"`-Schlüssel von `lo
 
 ## Optionale Watcher-UI
 
-Der Ordner `watcher/` enthält einen optionalen lokalen Daemon, eine REST-API
-und eine Browser-UI. Er nutzt dieselbe `lock_roots.json`, `lock_scan.py`,
-`lock_utils.py` und `prune_stale_locks.py` aus dem Repo-Root.
+Der Ordner `pure-locking/watcher/` enthält einen optionalen lokalen Daemon, eine
+REST-API und eine Browser-UI. Er nutzt dieselbe `lock_roots.json`, `lock_scan.py`,
+`lock_utils.py` und `prune_stale_locks.py` aus `pure-locking/`.
 
 Aus dem Repo-Root:
 
 ```bash
-python watcher/lock_watcher.py --update-cache
-python watcher/web_server.py --port 8095
+python pure-locking/watcher/lock_watcher.py --update-cache
+python pure-locking/watcher/web_server.py --port 8095
 ```
 
 Unter Windows:
 
 ```bat
-watcher\START.bat
+pure-locking\watcher\START.bat
 ```
 
 Öffnen:
@@ -171,7 +177,8 @@ http://127.0.0.1:8095
 
 Runtime-Daten liegen standardmäßig außerhalb des Repos in
 `~/.lock_master_watcher` und können mit `LOCK_MASTER_WATCHER_DATA` umgeleitet
-werden. Details zu API und Daemon stehen in [watcher/README.md](watcher/README.md).
+werden. Details zu API und Daemon stehen in
+[pure-locking/watcher/README.md](pure-locking/watcher/README.md).
 
 ---
 
@@ -235,7 +242,7 @@ ANLEGEN (erster Agent)  -->  EINCHECKEN (jeder Agent)  -->  ARBEITEN  -->  AUSCH
 
 ### Team-Lock anlegen
 
-`TEAM_LOCK_TEMPLATE.txt` in den Projektordner kopieren und den Header ausfüllen:
+`pure-locking/TEAM_LOCK_TEMPLATE.txt` in den Projektordner kopieren und den Header ausfüllen:
 
 ```
 owner: agent-lead
@@ -321,19 +328,40 @@ Erfordert `pytest` (`pip install pytest`).
 
 ## Dateistruktur
 
+Seit dem 26.07.2026 ist das Repository ein **Stack aus drei Teilmodulen**, der
+als ein Modul ausgeliefert wird. Jedes Teilmodul hat ein eigenes
+`ellmos-module.v2.json` und eine README, die sagt, was bei einer Teilentnahme
+fehlt.
+
 ```
-lock-master/
-├── lock_utils.py            # Kernbibliothek: Parsen, Scope, Verfall, Team-Lock-Hilfsfunktionen
-├── lock_scan.py             # CLI: aktive Sperren auflisten, Cache schreiben
-├── prune_stale_locks.py     # CLI: abgelaufene Sperren entfernen
-├── watcher/                 # Optionale localhost-Daemon-, REST-API- und Web-UI
-├── LOCK_TEMPLATE.txt        # Vorlage für neue Exclusive-Lock-Dateien
-├── TEAM_LOCK_TEMPLATE.txt   # Vorlage für neue Team-Lock-Dateien
-├── lock_roots.example.json  # Annotiertes Beispiel-Config
-├── LOCK-SYSTEM.md           # Kanonische Spec und Lebenszyklus-Referenz
+lock-master/                        # Stack -- wird als EIN Modul ausgeliefert
+├── pure-locking/                   # Das Sperren selbst
+│   ├── lock_utils.py               # Kernbibliothek: Parsen, Scope, Verfall, Team-Lock-Hilfsfunktionen
+│   ├── lock_scan.py                # CLI: aktive Sperren auflisten, Cache schreiben
+│   ├── prune_stale_locks.py        # CLI: abgelaufene Sperren entfernen
+│   ├── lock_create.py              # CLI: korrekten Lock-Dateinamen und Header bauen
+│   ├── bulk_lock.py                # CLI: viele Projektordner auf einmal sperren
+│   ├── watcher/                    # Optionale localhost-Daemon-, REST-API- und Web-UI
+│   ├── LOCK_TEMPLATE.txt           # Vorlage für neue Exclusive-Lock-Dateien
+│   ├── TEAM_LOCK_TEMPLATE.txt      # Vorlage für neue Team-Lock-Dateien
+│   └── lock_roots.example.json     # Annotiertes Beispiel-Config
+├── permission-control/             # Das Regelschema LOCK.permissions.json
+│   ├── permissions.py              # Auswertung allow / deny / ask
+│   └── LOCK_PERMISSIONS_TEMPLATE.json
+├── team-lock/                      # Platzhalter: atomare O_EXCL-Claims (geplant)
+│
+├── lock_scan.py                    # Kompatibilitäts-Shims: die flachen Einstiegs-
+├── lock_utils.py                   #   punkte funktionieren weiter aus dem Repo-Root.
+├── lock_create.py                  #   Jeder lädt das echte Modul unter dem eigenen
+├── bulk_lock.py                    #   Namen, `import lock_scan` liefert also das
+├── prune_stale_locks.py            #   Original und keinen Re-Export.
+├── permissions.py                  #
+│
+├── LOCK-SYSTEM.md                  # Kanonische Spec und Lebenszyklus-Referenz
+├── KONZEPT-ZERLEGUNG.md            # Warum der Stack zerlegt wurde
 ├── tests/
-│   └── test_smoke.py        # Smoke-Tests
-├── LICENSE                  # MIT
+│   └── test_smoke.py               # Smoke-Tests
+├── LICENSE                         # MIT
 ├── CHANGELOG.md
 ├── TODO.md
 ├── SECURITY.md

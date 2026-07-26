@@ -65,7 +65,7 @@ graph TD
 - **Read-only scan:** `lock_scan.py` lists all active locks across configured roots without touching any files.
 - **Markdown cache:** `lock_scan.py --write-cache` writes a `LOCK-CACHE.md` for instant status overview -- no scan needed.
 - **Dry-run prune:** `prune_stale_locks.py --dry-run` previews what would be removed.
-- **Optional local watcher UI:** `watcher/` adds a localhost daemon, REST API, and browser UI for live status, room maps, history, user locks, and prune actions.
+- **Optional local watcher UI:** `pure-locking/watcher/` adds a localhost daemon, REST API, and browser UI for live status, room maps, history, user locks, and prune actions.
 - **Zero dependencies:** pure Python standard library (3.10+).
 - **Config-driven:** all roots, depth limits, skip-dirs and cache targets live in `lock_roots.json` -- no hardcoded paths.
 
@@ -75,18 +75,24 @@ graph TD
 
 ### 1. Copy the scripts
 
+Everything you need for plain locking lives in `pure-locking/`:
+
 ```
-lock_utils.py
-lock_scan.py
-prune_stale_locks.py
-LOCK_TEMPLATE.txt
+pure-locking/lock_utils.py
+pure-locking/lock_scan.py
+pure-locking/prune_stale_locks.py
+pure-locking/LOCK_TEMPLATE.txt
 ```
 
-Place them in a directory of your choice (e.g. `scripts/`).
+Place them in a directory of your choice (e.g. `scripts/`). They import each
+other flatly, so keep them side by side.
+
+See [pure-locking/README.md](pure-locking/README.md) for what a partial
+extraction does **not** include.
 
 ### 2. Create `lock_roots.json`
 
-Copy `lock_roots.example.json`, rename it to `lock_roots.json`, and replace
+Copy `pure-locking/lock_roots.example.json`, rename it to `lock_roots.json`, and replace
 the placeholder paths with your actual project roots. The file is excluded from
 version control by `.gitignore` (it contains local absolute paths).
 
@@ -111,7 +117,7 @@ version control by `.gitignore` (it contains local absolute paths).
 
 ### 3. Create a lock
 
-Copy `LOCK_TEMPLATE.txt` into your project directory, fill in the fields, and
+Copy `pure-locking/LOCK_TEMPLATE.txt` into your project directory, fill in the fields, and
 rename it to `LOCK.txt` (or `LOCK.<scope>.txt` for component-level locking):
 
 ```
@@ -152,15 +158,15 @@ Writes `LOCK-CACHE.md` as defined in the `"caches"` key of `lock_roots.json`.
 
 ## Optional Watcher UI
 
-The `watcher/` directory contains an optional local daemon, REST API, and
+The `pure-locking/watcher/` directory contains an optional local daemon, REST API, and
 browser UI. It uses the same `lock_roots.json`, `lock_scan.py`,
 `lock_utils.py`, and `prune_stale_locks.py` from the repository root.
 
 From the repository root:
 
 ```bash
-python watcher/lock_watcher.py --update-cache
-python watcher/web_server.py --port 8095
+python pure-locking/watcher/lock_watcher.py --update-cache
+python pure-locking/watcher/web_server.py --port 8095
 ```
 
 On Windows:
@@ -177,7 +183,7 @@ http://127.0.0.1:8095
 
 Runtime data is stored outside the repository by default in
 `~/.lock_master_watcher` and can be redirected with `LOCK_MASTER_WATCHER_DATA`.
-See [watcher/README.md](watcher/README.md) for API and daemon details.
+See [pure-locking/watcher/README.md](pure-locking/watcher/README.md) for API and daemon details.
 
 ---
 
@@ -251,7 +257,7 @@ CREATE (first agent)  -->  CHECK IN (each agent)  -->  WORK  -->  CHECK OUT  -->
 
 ### Creating a Team Lock
 
-Copy `TEAM_LOCK_TEMPLATE.txt` into the project directory and fill in the header:
+Copy `pure-locking/TEAM_LOCK_TEMPLATE.txt` into the project directory and fill in the header:
 
 ```
 owner: agent-lead
@@ -344,19 +350,39 @@ Requires `pytest` (`pip install pytest`).
 
 ## Files
 
+Since 2026-07-26 the repository is a **stack of three sub-modules**, shipped as
+one module. Each sub-module carries its own `ellmos-module.v2.json` and a README
+stating what a partial extraction does not include.
+
 ```
-lock-master/
-├── lock_utils.py            # Core library: parse, scope, expiry, team-lock helpers
-├── lock_scan.py             # CLI: list active locks, write cache
-├── prune_stale_locks.py     # CLI: remove expired locks
-├── watcher/                 # Optional localhost daemon, REST API, and Web UI
-├── LOCK_TEMPLATE.txt        # Template for creating an exclusive lock
-├── TEAM_LOCK_TEMPLATE.txt   # Template for creating a team lock
-├── lock_roots.example.json  # Annotated example config
-├── LOCK-SYSTEM.md           # Canonical spec and lifecycle reference
+lock-master/                        # Stack -- shipped as ONE module
+├── pure-locking/                   # The locking itself
+│   ├── lock_utils.py               # Core library: parse, scope, expiry, team-lock helpers
+│   ├── lock_scan.py                # CLI: list active locks, write cache
+│   ├── prune_stale_locks.py        # CLI: remove expired locks
+│   ├── lock_create.py              # CLI: build a correct lock filename and header
+│   ├── bulk_lock.py                # CLI: lock/unlock many project roots at once
+│   ├── watcher/                    # Optional localhost daemon, REST API, and Web UI
+│   ├── LOCK_TEMPLATE.txt           # Template for creating an exclusive lock
+│   ├── TEAM_LOCK_TEMPLATE.txt      # Template for creating a team lock
+│   └── lock_roots.example.json     # Annotated example config
+├── permission-control/             # The LOCK.permissions.json rule scheme
+│   ├── permissions.py              # allow / deny / ask evaluation
+│   └── LOCK_PERMISSIONS_TEMPLATE.json
+├── team-lock/                      # Placeholder: atomic O_EXCL claims (planned)
+│
+├── lock_scan.py                    # Compatibility shims: the flat entry points
+├── lock_utils.py                   #   keep working from the repository root.
+├── lock_create.py                  #   Each loads the real module under its own
+├── bulk_lock.py                    #   name, so `import lock_scan` yields the
+├── prune_stale_locks.py            #   original, not a re-export.
+├── permissions.py                  #
+│
+├── LOCK-SYSTEM.md                  # Canonical spec and lifecycle reference
+├── KONZEPT-ZERLEGUNG.md            # Why the stack is split (German)
 ├── tests/
-│   └── test_smoke.py        # Smoke tests
-├── LICENSE                  # MIT
+│   └── test_smoke.py               # Smoke tests
+├── LICENSE                         # MIT
 ├── CHANGELOG.md
 ├── TODO.md
 ├── SECURITY.md
