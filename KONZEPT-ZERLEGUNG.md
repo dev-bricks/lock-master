@@ -212,3 +212,12 @@ Stand 2026-07-26, Lauf „lockmaster-split" (Auftrag
 - **`visibility` steht überall auf `public-candidate`**, gespiegelt vom
   Root-Manifest. `.MODULES/TODO.md` führt die Korrektur als eigenen Sweep mit
   begründetem Verzicht auf stückweises Vorgehen — hier nicht vorgegriffen.
+- **Externe Verweise auf Modul-Interna** wurden über ganz OneDrive gesucht.
+  Kein Code-Konsument, nur Dokumente. Zwei Live-Wegweiser in
+  `_control-center/_lock_watcher/` (README, TODO) zeigten nach dem Verschieben
+  ins Leere und wurden korrigiert. Nicht angefasst: `_control-center/PLAN.md`
+  (dort steht Phase 1 durchgängig auf `- [ ]`, obwohl erledigt — der Plan ist
+  im Erledigungsstand veraltet, nicht nur in den Pfaden; gehört als eigener
+  Vorgang nachgeführt), dessen `.SYNC`-Snapshot, das fremd-geclaimte Ticket
+  `T-20260715-01` und `_scripts/LOCK-SYSTEM.md` (Spec der Deploy-Kopie, die nie
+  ein lokales `watcher/` hatte).
