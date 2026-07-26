@@ -1,0 +1,40 @@
+{
+  "schema": "ellmos.module.v2",
+  "id": "lock-master.pure-locking",
+  "display_name": "pure-locking",
+  "description": "LOCK*.txt-Sperren: Anlegen, Scannen, Prunen, Bulk-Operationen, optionaler Watcher mit REST-API und Web-UI. Teilmodul des lock-master-Stacks.",
+  "category": "control",
+  "kind": "protocol",
+  "status": "active",
+  "visibility": "public-candidate",
+  "provides": [
+    "control.locks"
+  ],
+  "requires": [],
+  "optional": [],
+  "conflicts": [],
+  "surfaces": [
+    "library",
+    "cli",
+    "workflow"
+  ],
+  "state": {
+    "ownership": "external",
+    "location": "project"
+  },
+  "boundaries": {
+    "network": "optional",
+    "data": "user-local",
+    "platforms": [
+      "windows",
+      "macos",
+      "linux"
+    ]
+  },
+  "source_of_truth": {
+    "type": "local-directory",
+    "path": ".",
+    "repository": "https://github.com/dev-bricks/lock-master"
+  },
+  "adapters": []
+}

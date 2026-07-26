@@ -1,0 +1,34 @@
+{
+  "schema": "ellmos.module.v2",
+  "id": "lock-master.team-lock",
+  "display_name": "team-lock",
+  "description": "Platzhalter. Vorgesehen fuer atomare O_EXCL-Claims, die spaeter aus swarm-ai herausgeloest werden. Enthaelt heute keinen Code; provides ist bewusst leer.",
+  "category": "control",
+  "kind": "protocol",
+  "status": "planned",
+  "visibility": "public-candidate",
+  "provides": [],
+  "requires": [],
+  "optional": [],
+  "conflicts": [],
+  "surfaces": [],
+  "state": {
+    "ownership": "none",
+    "location": "none"
+  },
+  "boundaries": {
+    "network": "none",
+    "data": "none",
+    "platforms": [
+      "windows",
+      "macos",
+      "linux"
+    ]
+  },
+  "source_of_truth": {
+    "type": "local-directory",
+    "path": ".",
+    "repository": "https://github.com/dev-bricks/lock-master"
+  },
+  "adapters": []
+}

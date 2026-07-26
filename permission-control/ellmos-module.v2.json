@@ -1,0 +1,38 @@
+{
+  "schema": "ellmos.module.v2",
+  "id": "lock-master.permission-control",
+  "display_name": "permission-control",
+  "description": "Agent-neutrales, ordner-scoped Rechteschema LOCK.permissions.json (allow/deny/ask, Praezedenz deny > ask > allow > default). Teilmodul des lock-master-Stacks.",
+  "category": "control",
+  "kind": "protocol",
+  "status": "active",
+  "visibility": "public-candidate",
+  "provides": [
+    "control.permissions"
+  ],
+  "requires": [],
+  "optional": [],
+  "conflicts": [],
+  "surfaces": [
+    "library"
+  ],
+  "state": {
+    "ownership": "external",
+    "location": "project"
+  },
+  "boundaries": {
+    "network": "none",
+    "data": "user-local",
+    "platforms": [
+      "windows",
+      "macos",
+      "linux"
+    ]
+  },
+  "source_of_truth": {
+    "type": "local-directory",
+    "path": ".",
+    "repository": "https://github.com/dev-bricks/lock-master"
+  },
+  "adapters": []
+}
