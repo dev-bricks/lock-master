@@ -22,7 +22,7 @@ os.environ.setdefault(
     "LOCK_MASTER_WATCHER_DATA",
     str(Path(tempfile.mkdtemp(prefix="lockmaster-test-")))
 )
-sys.path.insert(0, str(ROOT / "watcher"))
+sys.path.insert(0, str(ROOT / "pure-locking" / "watcher"))
 
 import lock_utils  # noqa: E402
 import scanner  # noqa: E402

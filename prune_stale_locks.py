@@ -1,95 +1,42 @@
 r"""
-prune_stale_locks.py -- System-wide stale cleanup for project locks (LOCK*.txt)
+prune_stale_locks.py -- Kompatibilitaets-Shim (lock-master Stack)
 
-Scans all roots configured in lock_roots.json (with depth limits and
-skip-lists) for LOCK*.txt files and removes expired ones:
-  created + expires_after < now  (default expires_after = 24h)
-Fallback for missing 'created': file mtime.
-Legacy TEST.txt/TESTS.txt are NOT touched (no expiry format).
+Die Implementierung liegt seit der Stack-Zerlegung (2026-07-26) in
+    pure-locking/prune_stale_locks.py
 
-Usage:
-  python prune_stale_locks.py
-  python prune_stale_locks.py --dry-run
-  python prune_stale_locks.py --roots-file <path>
+Diese Datei haelt die flache Einstiegsflaeche des Modulroots stabil:
+`import prune_stale_locks` und `python prune_stale_locks.py` funktionieren unveraendert -- das ist
+die Zusage aus KONZEPT-ZERLEGUNG.md, Abschnitt "KRITISCH".
 
-Canonical spec: LOCK-SYSTEM.md (same directory).
-Format/expiry logic: lock_utils.py.
-Directory walk + config loading: lock_scan.py (DRY, no second standard).
+Kein Re-Export, sondern Selbstersetzung: das echte Modul wird unter DIESEM
+Namen geladen und in sys.modules an die Stelle des Shims gesetzt. Es entsteht
+kein zweites Modulobjekt und keine Teilmenge des Namensraums -- Aufrufer
+bekommen das Original (gleiche Funktionen, gleiche Konstanten, `__file__`
+zeigt auf die reale Datei). Wird der Shim als Skript gestartet, ist
+`__name__ == "__main__"`, sodass der `main()`-Block des Originals greift.
+
+pure-locking/ wird dabei an den Anfang von sys.path gesetzt, damit die flachen
+Nachbar-Importe des Originals (z. B. `import lock_utils` in lock_scan.py)
+dort und nicht wieder ueber die Shims aufloesen.
 """
 
-from __future__ import annotations
-
-import argparse
-from datetime import datetime
+import importlib.util
+import sys
 from pathlib import Path
 
-import lock_utils
-from lock_scan import DEFAULT_ROOTS_FILE, iter_lock_dirs, load_config
+_REAL = Path(__file__).resolve().parent / "pure-locking" / "prune_stale_locks.py"
 
-
-def host_is_reachable(host: str | None) -> bool | None:  # noqa: ARG001
-    """Whether the system named in a lock's 'host' field is reachable.
-
-    STUB / prepared hook -- not yet active, always returns None. A future
-    implementation could ping the host (e.g. via Tailscale) so that locks of a
-    permanently unreachable system can be cleaned up earlier; until then locks
-    expire purely via 'expires_after'."""
-    return None
-
-
-def prune(config: dict, dry_run: bool = False) -> int:
-    now = datetime.now()
-    removed = 0
-    kept = 0
-    seen: set[Path] = set()
-
-    for d in iter_lock_dirs(config):
-        if d in seen:
-            continue
-        seen.add(d)
-        for name, _scope, _is_legacy in lock_utils.find_lock_files(d):
-            lock_path = d / name
-            # is_prunable() excludes legacy (no expiry), user locks (user-only
-            # removal) and non-expired locks.
-            if not lock_utils.is_prunable(lock_path, now):
-                kept += 1
-                continue
-            created, expires, source = lock_utils.lock_created_and_expiry(lock_path)
-            age_h = (now - created).total_seconds() / 3600
-            if dry_run:
-                print(f"[would remove] {lock_path} "
-                      f"(age {age_h:.1f}h, expires_after {expires}, source {source})")
-            else:
-                try:
-                    lock_path.unlink()
-                    print(f"[removed] {lock_path} "
-                          f"(age {age_h:.1f}h, expires_after {expires}, source {source})")
-                except OSError as exc:
-                    print(f"[ERROR] {lock_path} could not be removed: {exc}")
-                    kept += 1
-                    continue
-            removed += 1
-
-    verb = "would remove" if dry_run else "removed"
-    print(f"prune_stale_locks: {removed} expired LOCK*.txt {verb}, "
-          f"{kept} active lock(s) kept.")
-    return removed
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Remove expired project locks (LOCK*.txt) across all configured roots."
+if not _REAL.is_file():  # pragma: no cover - Schutz vor Teilentnahme des Roots
+    raise ImportError(
+        f"lock-master: Teilmodul pure-locking fehlt (erwartet: {_REAL}). "
+        "Der Shim im Modulroot setzt den vollstaendigen Stack voraus."
     )
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Show what would be removed without deleting anything.")
-    parser.add_argument("--roots-file", default=str(DEFAULT_ROOTS_FILE),
-                        help="Path to lock_roots.json.")
-    args = parser.parse_args()
 
-    config = load_config(Path(args.roots_file))
-    prune(config, dry_run=args.dry_run)
-    return 0
+_DIR = str(_REAL.parent)
+if _DIR not in sys.path:
+    sys.path.insert(0, _DIR)
 
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+_spec = importlib.util.spec_from_file_location(__name__, _REAL)
+_module = importlib.util.module_from_spec(_spec)
+sys.modules[__name__] = _module
+_spec.loader.exec_module(_module)

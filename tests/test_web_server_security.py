@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "watcher"))
+sys.path.insert(0, str(ROOT / "pure-locking" / "watcher"))
 
 import web_server  # noqa: E402
 
