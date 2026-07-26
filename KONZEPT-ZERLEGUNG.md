@@ -91,6 +91,48 @@ Locks" aussieht.
 ausführen und bestätigen, dass er scannt. Die beiden Einstiegspunkte bleiben stabil,
 unabhängig von der inneren Paketierung.
 
+## Kompatibilitäts-Shims im Root
+
+Die flachen Einstiegspunkte mussten das Verschieben überleben. Im Modulroot
+liegen deshalb sechs Shims — `lock_scan.py`, `lock_utils.py`, `lock_create.py`,
+`bulk_lock.py`, `prune_stale_locks.py`, `permissions.py`. Sie tragen die Namen
+der verschobenen Dateien und zeigen auf deren neuen Ort.
+
+**Kein Re-Export.** Ein `from … import *` hätte private Namen und
+nicht-exportierte Konstanten verloren und ein zweites Modulobjekt erzeugt.
+Stattdessen lädt jeder Shim das echte Modul **unter seinem eigenen Namen** und
+ersetzt sich in `sys.modules`:
+
+```python
+_spec = importlib.util.spec_from_file_location(__name__, _REAL)
+_module = importlib.util.module_from_spec(_spec)
+sys.modules[__name__] = _module
+_spec.loader.exec_module(_module)
+```
+
+Das funktioniert, weil der Import-Mechanismus nach `exec_module` erneut aus
+`sys.modules` liest. Folgen, empirisch geprüft und nicht angenommen:
+
+- `import lock_scan` liefert das Original — `__file__` zeigt auf
+  `pure-locking/lock_scan.py`, nicht auf den Shim.
+- `sys.modules['lock_scan'] is lock_scan` ist wahr; es gibt kein Duplikat.
+- Private Namen (`_split`, `_ACTION_RE`) sind vorhanden.
+- `lock_scan.lock_utils is lock_utils` — Quervergleiche bleiben konsistent.
+- Beim Skriptaufruf ist `__name__ == "__main__"`, der `main()`-Block des
+  Originals greift also unverändert.
+- Es ist gleichgültig, ob ein Aufrufer den Modulroot oder das Teilmodul auf
+  `sys.path` hat: beide Wege enden bei derselben Datei.
+
+Jeder Shim wirft eine sprechende `ImportError`, wenn sein Teilmodul fehlt —
+sonst wäre eine Teilentnahme des Roots ein stiller Fehlschlag, und genau das
+soll dieses Modul ja verhindern.
+
+**Nebenwirkung, bewusst in Kauf genommen:** `lock_scan.DEFAULT_ROOTS_FILE` und
+`SYSTEM_CACHE_PATH` folgen `__file__` und liegen jetzt in `pure-locking/`. Wer
+bisher `lock_roots.json` im Modulroot ablegte, muss sie mitverschieben. Beide
+Namen sind weiterhin von `.gitignore` erfasst (die Muster haben keinen
+führenden Slash und greifen daher in jeder Tiefe — geprüft).
+
 ## Ausdrücklich NICHT Teil dieses Umbaus
 
 - **Kein Plan-D-Umzug.** lock-master liegt in OneDrive; die Migration nach
@@ -112,12 +154,61 @@ unabhängig von der inneren Paketierung.
 
 ## Umsetzungsstand
 
+Stand 2026-07-26, Lauf „lockmaster-split" (Auftrag
+`_control-center/_agentjobs/IN/lockmaster-split.md`).
+
 - [x] Konzept beschlossen und begründet (diese Datei)
-- [ ] `ellmos-module.v2.json` je Teilmodul
-- [ ] Physische Trennung `pure-locking` / `permission-control` / `team-lock`
+- [x] Physische Trennung `pure-locking` / `permission-control` / `team-lock`
+      — per `git mv`, Historie erhalten. Commit `cd70ea3`.
+- [x] `ellmos-module.v2.json` je Teilmodul — Commit `1e14227`. Gegen
+      `_templates/ellmos.module.v2.schema.json` geprüft. IDs gepunktet
+      (`lock-master.pure-locking` usw.), `provides` aufgeteilt statt dupliziert.
+- [x] README je Teilmodul mit Teilentnahme-Warnung und dem Satz, dass
+      Durchsetzung Konvention und keine Sicherheitsgrenze ist.
+- [x] Kompatibilitäts-Shims im Root (siehe eigener Abschnitt oben)
+- [x] Abnahmetest: Lockcheck-Befehl aus `~/CLAUDE.md` wörtlich — scannt.
+      Deploy-Kopie **und** Modul, zusätzlich Direktaufruf aus `pure-locking/`.
+- [x] Doku-Pfade nachgezogen (8 Dateien, ~50 Stellen) — Commit `1379dce`.
+      Vorher tot: der Link `watcher/README.md` in `README.md`.
+- [x] Tests grün nach jedem Teilschritt: **64 passed**, unverändert zur Basis.
 - [ ] `team-lock` aus `swarm-ai/tools/team_lock.py` herauslösen (vorher dort
-      `git status` prüfen — Fremdänderungen bekommen einen eigenen Commit)
-- [ ] Abnahmetest: Lockcheck-Befehl aus `~/CLAUDE.md` wörtlich, muss scannen
-- [ ] `modules.catalog.json` neu erzeugen (Registry-Drift nicht vergrößern)
+      `git status` prüfen — Fremdänderungen bekommen einen eigenen Commit).
+      **In diesem Lauf ausdrücklich nicht getan; `swarm-ai` wurde nicht
+      angefasst.** Der Ordner enthält nur README + Manifest, `provides` ist
+      leer, `status: planned`.
+- [ ] `modules.catalog.json` neu erzeugen — **war nicht Teil des Auftrags und
+      ist auch nicht nötig.** Geprüft statt vermutet:
+      `build_catalog.discover_manifests()` setzt nach einem Fund
+      `dirnames[:] = []` („without entering module children"). Ein Lauf über
+      `.CONTROL` findet weiterhin genau `lock-master/ellmos-module.v2.json`,
+      nicht die drei Teilmanifeste. Der Stack bleibt **ein** Katalogeintrag —
+      genau die Zusage aus dem Beschluss. Es entsteht also keine Registry-Drift.
 - [ ] `NEW-STACK_COMALOCK.md` → `validate_composition.py` → `stacks.catalog.json`
-      → `STACK-MAPPING.md`
+      → `STACK-MAPPING.md` — nicht beauftragt, nicht ausgeführt.
+- [ ] `.STACKS/NEW-STACK_ROSHAMBO.md` nachziehen: die Zeile, die `lock-master`
+      mit „Lease-Semantik … (`deny > ask > allow`)" führt, vermischt beide
+      Teile. Nach der Zerlegung gilt: `pure-locking` liefert die Leases,
+      `permission-control` die Auswertungsordnung.
+
+### Offene Punkte, die dieser Lauf gefunden, aber nicht angefasst hat
+
+- **Deploy ≠ Modul.** `~/OneDrive/_scripts/lock_scan.py` und
+  `prune_stale_locks.py` sind ältere **deutsche** Fassungen (03.07. 23:56); das
+  Modul wurde am 04.07. 00:39 ins Englische übersetzt. 245 Diffzeilen, im Kern
+  Docstrings. Im Lauf direkt sichtbar geworden: derselbe Scan meldet im Deploy
+  „1 aktive Lock(s) … Restzeit=22h47m", im Modul „1 active lock(s) …
+  remaining=22h47m". **Die Deploy-Kopien wurden nicht verändert** — ein
+  Re-Deploy ist eine eigene Entscheidung des Nutzers. Solange er ausbleibt,
+  ist der Deploy von der Zerlegung unabhängig und damit auch unbedroht.
+- **Laufzeit des Vollscans.** Der Deploy-Scan über alle Roots braucht mehr als
+  120 Sekunden (OneDrive-Vollbegehung), läuft dann aber sauber durch: 17 aktive
+  Locks, leeres stderr, Exit 0. Das ist eine Laufzeiteigenschaft, kein Defekt.
+  Wer ihn in einem Timeout-Kontext aufruft, sollte das wissen.
+- **Versionsangaben divergieren:** `VERSION` sagt `1.4.1`, `pyproject.toml`
+  sagt `1.4.2`. Bestand vor diesem Lauf; Versionsarbeit war ausgeschlossen.
+- **`pyproject.toml` hat keine explizite setuptools-Paketkonfiguration.** Wie
+  die Flat-Layout-Autodiscovery mit den bindestrich-benannten Ordnern umgeht,
+  ist ungetestet. `pip install .` gehörte nicht zur Abnahme.
+- **`visibility` steht überall auf `public-candidate`**, gespiegelt vom
+  Root-Manifest. `.MODULES/TODO.md` führt die Korrektur als eigenen Sweep mit
+  begründetem Verzicht auf stückweises Vorgehen — hier nicht vorgegriffen.
