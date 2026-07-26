@@ -5,6 +5,7 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![Lizenz: MIT](https://img.shields.io/badge/Lizenz-MIT-yellow.svg)](LICENSE)
 [![Multi-Agent Lock Protokoll](https://img.shields.io/badge/multi--agent-file%20locking-green.svg)](#features)
+[![Pytest 64 passed](https://img.shields.io/badge/pytest-64%20passed-brightgreen.svg)](#)
 [![LLM Indexierung](https://img.shields.io/badge/llms.txt-indexiert-purple.svg)](llms.txt)
 
 [EN](README.md) | **DE** | [ES](README_es.md) | [JA](README_ja.md) | [RU](README_ru.md) | [ZH](README_zh-Hans.md)
@@ -12,7 +13,7 @@
 **Portables, config-gesteuertes Datei-Sperrsystem für Multi-Agenten-Projektkoordination.**
 
 > [!NOTE]
-> **KI- / LLM-Indexierung**: KI-Agenten und automatisierte Werkzeuge können [llms.txt](llms.txt) für eine maschinenlesbare Zusammenfassung, Suchbegriffe und Disambiguation nutzen. Letzte Prüfung: **25.07.2026**.
+> **KI- / LLM-Indexierung**: KI-Agenten und automatisierte Werkzeuge können [llms.txt](llms.txt) für eine maschinenlesbare Zusammenfassung, Suchbegriffe und Disambiguation nutzen. Letzte Prüfung: **26.07.2026**.
 
 lock-master bietet ein leichtgewichtiges, abhängigkeitsfreies Sperrprotokoll auf Basis von Klartextdateien. Eine `LOCK*.txt`-Datei in einem Projektordner signalisiert, dass das Projekt oder eine Komponente gerade in Bearbeitung ist -- kein Agent, keine Automation und kein autonomer Loop verändert diesen Bereich, solange eine gültige, nicht abgelaufene Sperre existiert.
 
@@ -41,6 +42,18 @@ oder `Codex Claude Lock-Dateien`.
 ---
 
 ## Features
+
+```mermaid
+graph TD
+    A["Agent / Automation Start"] --> B["Workspaces scannen via lock_scan.py"]
+    B --> C{"LOCK*.txt vorhanden?"}
+    C -- "Nein" --> D["Zugriff gewährt (Freigabe)"]
+    C -- "Ja" --> E{"Sperrtyp & Verfall prüfen"}
+    E -- "Abgelaufen & Bereinigbar" --> F["prune_stale_locks.py ausführen -> Zugriff gewährt"]
+    E -- "Exklusive Sperre (Aktiv)" --> G["Zugriff verweigert (Warten / Umschalten)"]
+    E -- "Team-Lock (Aktiv)" --> H["Sub-Claims prüfen (Dateien/MCP/Tools)"]
+    E -- "User- / Condition-Lock" --> I["Geschützt: Nicht antasten bis explizit freigegeben"]
+```
 
 - **Scope-basiertes Sperren:** `LOCK.txt` sperrt das gesamte Projekt; `LOCK.<scope>.txt` sperrt eine Komponente. Mehrere Agenten können parallel an verschiedenen Scopes desselben Projekts arbeiten.
 - **Team-Locks:** `LOCK.team.<host>.txt` koordiniert mehrere Agenten desselben Systems intern -- Anwesenheitslog, Datei-Claims, Tool-Claims und Nachrichtenbrett in einer Datei. Andere Systeme sehen die Datei und bleiben draußen.

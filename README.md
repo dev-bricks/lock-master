@@ -5,6 +5,7 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Multi-Agent Lock Protocol](https://img.shields.io/badge/multi--agent-file%20locking-green.svg)](#features)
+[![Pytest 64 passed](https://img.shields.io/badge/pytest-64%20passed-brightgreen.svg)](#)
 [![LLM Indexing](https://img.shields.io/badge/llms.txt-indexed-purple.svg)](llms.txt)
 
 **EN** | [DE](README_de.md) | [ES](README_es.md) | [JA](README_ja.md) | [RU](README_ru.md) | [ZH](README_zh-Hans.md)
@@ -12,7 +13,7 @@
 **Portable, config-driven file-lock system for multi-agent project coordination.**
 
 > [!NOTE]
-> **AI / LLM Indexing**: AI agents and automated tools can inspect [llms.txt](llms.txt) for a machine-readable summary, search terms, and disambiguation details. Last checked: **2026-07-25**.
+> **AI / LLM Indexing**: AI agents and automated tools can inspect [llms.txt](llms.txt) for a machine-readable summary, search terms, and disambiguation details. Last checked: **2026-07-26**.
 
 lock-master provides a lightweight, zero-dependency locking protocol based on
 plain text files. A `LOCK*.txt` file in a project directory signals that the
@@ -44,6 +45,18 @@ searched together with terms such as `LOCK*.txt`, `multi-agent file locking`,
 ---
 
 ## Features
+
+```mermaid
+graph TD
+    A["Agent / Automation Start"] --> B["Scan Workspaces via lock_scan.py"]
+    B --> C{"LOCK*.txt Present?"}
+    C -- "No" --> D["Access Granted (Unlocked)"]
+    C -- "Yes" --> E{"Check Lock Type & Expiry"}
+    E -- "Expired & Prunable" --> F["Run prune_stale_locks.py -> Access Granted"]
+    E -- "Exclusive Lock (Active)" --> G["Access Denied (Wait / Skip)"]
+    E -- "Team Lock (Active)" --> H["Check Sub-claims (Files/MCP/Tools)"]
+    E -- "User / Condition Lock" --> I["Protected: Must not touch until released"]
+```
 
 - **Scope-based locking:** `LOCK.txt` locks the whole project; `LOCK.<scope>.txt` locks a component. Multiple agents can work in parallel on different scopes of the same project.
 - **Team Locks:** `LOCK.team.<host>.txt` coordinates multiple agents within the same system internally — presence log, file claims, tool claims, and message board in one file. Other systems see the file and stay out.

@@ -5,7 +5,12 @@ All notable changes to this project will be documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 This project adheres to [Semantic Versioning](https://semver.org/).
 
----
+## [1.4.3] - 2026-07-26
+
+### Added & Improved
+
+- **Mermaid Diagrams**: Added visual multi-agent lock detection lifecycle flowcharts to `README.md` and `README_de.md`.
+- **Badges & Callouts**: Added Pytest 64-passed status badge and refreshed LLM indexing date (`2026-07-26`) in `llms.txt`, `README.md`, and `README_de.md`.
 
 ## [1.4.2] - 2026-07-25
 
