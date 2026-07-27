@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lock-master"
-version = "1.4.2"
+version = "1.4.4"
 description = "Portable, zero-dependency multi-agent file-lock system — Exclusive and Team Locks (LOCK*.txt)"
 readme = "README.md"
 authors = [
@@ -45,7 +45,3 @@ classifiers = [
 Homepage = "https://github.com/dev-bricks/lock-master#readme"
 Repository = "https://github.com/dev-bricks/lock-master.git"
 Issues = "https://github.com/dev-bricks/lock-master/issues"
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = "."

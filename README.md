@@ -13,7 +13,7 @@
 **Portable, config-driven file-lock system for multi-agent project coordination.**
 
 > [!NOTE]
-> **AI / LLM Indexing**: AI agents and automated tools can inspect [llms.txt](llms.txt) for a machine-readable summary, search terms, and disambiguation details. Last checked: **2026-07-26**.
+> **AI / LLM Indexing**: AI agents and automated tools can inspect [llms.txt](llms.txt) for a machine-readable summary, search terms, and disambiguation details. Last checked: **2026-07-27**.
 
 lock-master provides a lightweight, zero-dependency locking protocol based on
 plain text files. A `LOCK*.txt` file in a project directory signals that the

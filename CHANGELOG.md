@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.4.4] - 2026-07-27
+
+### Maintenance & Technical Hygiene
+
+- **Version Alignment**: Synchronized `VERSION` file (`1.4.4`) and `pyproject.toml` (`1.4.4`) metadata with actual project state.
+- **Pytest Config Clean-up**: Consolidated test configuration in `pytest.ini` and eliminated redundant `[tool.pytest.ini_options]` in `pyproject.toml` to remove CLI warning output.
+- **LLM & Readme Index Refresh**: Updated LLM indexing timestamps (`2026-07-27`) across `llms.txt`, `README.md`, and `README_de.md`.
+
 ## [1.4.3] - 2026-07-26
 
 ### Added & Improved
