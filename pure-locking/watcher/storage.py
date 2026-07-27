@@ -274,11 +274,18 @@ class LockDB:
         return cur.lastrowid
 
     def refresh_expired_locks(self) -> int:
-        """Markiert aktive Locks mit abgelaufenem expires_at als expired."""
+        """Mark active ordinary locks with elapsed ``expires_at`` as expired.
+
+        User and condition locks are protected by policy and therefore excluded
+        here as a second defence even if an older scanner persisted a nominal
+        expiry timestamp.
+        """
         now_dt = datetime.now()
         now_iso = now_dt.isoformat(timespec="seconds")
         rows = self._conn.execute(
-            "SELECT id, expires_at FROM locks WHERE status='active' AND expires_at IS NOT NULL"
+            "SELECT id, expires_at FROM locks "
+            "WHERE status='active' AND expires_at IS NOT NULL "
+            "AND lock_type NOT IN ('user', 'condition')"
         ).fetchall()
 
         expired_ids: list[int] = []

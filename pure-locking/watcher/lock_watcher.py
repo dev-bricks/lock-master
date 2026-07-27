@@ -21,7 +21,9 @@ import signal
 import socket
 import subprocess
 import sys
+import threading
 import time
+from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 
@@ -39,6 +41,7 @@ sys.path.insert(0, str(config.SCRIPTS_DIR))
 STATS_SCAN_INTERVAL: int = 900  # 15 Minuten
 HEARTBEAT_INTERVAL: int = 5
 STALE_DAEMON_SECONDS: int = max(180, config.FULL_SCAN_INTERVAL * 3)
+SCAN_OVERRUN_WARN_SECONDS: int = config.FULL_SCAN_INTERVAL * 5
 
 
 def _now_iso() -> str:
@@ -111,7 +114,11 @@ def get_running_daemon_status() -> dict | None:
     return status if _daemon_status_is_fresh(status) else None
 
 
-def _write_daemon_status(update_cache: bool, started_at: str) -> None:
+def _write_daemon_status(
+    update_cache: bool,
+    started_at: str,
+    scan_info: dict | None = None,
+) -> None:
     status = {
         "pid": os.getpid(),
         "host": socket.gethostname(),
@@ -120,6 +127,8 @@ def _write_daemon_status(update_cache: bool, started_at: str) -> None:
         "update_cache": update_cache,
         "db_path": str(config.DB_PATH),
     }
+    if scan_info:
+        status.update(scan_info)
     tmp_path = config.DAEMON_STATUS_PATH.with_suffix(".tmp")
     tmp_path.write_text(json.dumps(status, ensure_ascii=False, indent=2), encoding="utf-8")
     tmp_path.replace(config.DAEMON_STATUS_PATH)
@@ -253,6 +262,22 @@ def _run_stats_scan(db: storage.LockDB) -> None:
     db.upsert_room_stats_batch(stats_map)
 
 
+def _heartbeat_loop(
+    stop_event: threading.Event,
+    update_cache: bool,
+    started_at: str,
+    scan_state: dict,
+    state_lock: threading.Lock,
+    interval: float = HEARTBEAT_INTERVAL,
+) -> None:
+    """Advance daemon health independently from potentially blocking scans."""
+    while not stop_event.is_set():
+        with state_lock:
+            info = dict(scan_state)
+        _write_daemon_status(update_cache, started_at, scan_info=info)
+        stop_event.wait(interval)
+
+
 def run_daemon(update_cache: bool) -> None:
     """Endlosloop mit Dual-Scan-Rhythmus."""
     existing = get_running_daemon_status()
@@ -265,11 +290,18 @@ def run_daemon(update_cache: bool) -> None:
         return
 
     started_at = _now_iso()
-    _write_daemon_status(update_cache, started_at)
     cfg = config.load_scan_config()
     db = storage.LockDB(config.DB_PATH)
 
     shutdown_requested = False
+    stop_heartbeat = threading.Event()
+    state_lock = threading.Lock()
+    scan_state: dict = {
+        "scan_in_progress": False,
+        "scan_started_at": None,
+        "last_scan_finished_at": None,
+        "last_scan_duration_s": None,
+    }
 
     def _handle_signal(signum, frame):
         nonlocal shutdown_requested
@@ -278,58 +310,108 @@ def run_daemon(update_cache: bool) -> None:
     signal.signal(signal.SIGINT, _handle_signal)
     signal.signal(signal.SIGTERM, _handle_signal)
 
-    print(f"[{_now_iso()}] Lock-Watcher gestartet. "
-          f"Full-Scan alle {config.FULL_SCAN_INTERVAL}s, Quick-Check alle {config.CHECK_INTERVAL}s.")
+    _write_daemon_status(update_cache, started_at, scan_info=scan_state)
+    heartbeat_thread = threading.Thread(
+        target=_heartbeat_loop,
+        args=(stop_heartbeat, update_cache, started_at, scan_state, state_lock),
+        name="lock-watcher-heartbeat",
+        daemon=True,
+    )
+    heartbeat_thread.start()
+
+    print(
+        f"[{_now_iso()}] Lock-Watcher gestartet. "
+        f"Full-Scan alle {config.FULL_SCAN_INTERVAL}s, "
+        f"Quick-Check alle {config.CHECK_INTERVAL}s."
+    )
 
     last_full_scan: float = 0.0
     last_check: float = 0.0
     last_stats_scan: float = 0.0
-    last_heartbeat: float = 0.0
+    executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="lock-watcher-scan")
+    pending_scan: Future | None = None
+    pending_scan_started_mono: float = 0.0
+    last_overrun_warning: float = 0.0
+
+    def _submit_full_scan() -> Future:
+        nonlocal pending_scan_started_mono
+        with state_lock:
+            scan_state["scan_in_progress"] = True
+            scan_state["scan_started_at"] = _now_iso()
+        pending_scan_started_mono = time.monotonic()
+        return executor.submit(_run_full_scan, db, cfg, update_cache)
 
     try:
         while not shutdown_requested:
             now = time.monotonic()
 
-            if now - last_heartbeat >= HEARTBEAT_INTERVAL:
-                _write_daemon_status(update_cache, started_at)
-                last_heartbeat = time.monotonic()
-
-            if now - last_full_scan >= config.FULL_SCAN_INTERVAL:
-                # Ein fehlgeschlagener Scan darf den Daemon nicht beenden
+            if pending_scan is not None and pending_scan.done():
+                with state_lock:
+                    scan_state["scan_in_progress"] = False
+                    scan_state["last_scan_finished_at"] = _now_iso()
+                    scan_state["last_scan_duration_s"] = round(
+                        time.monotonic() - pending_scan_started_mono, 1
+                    )
                 try:
-                    stats = _run_full_scan(db, cfg, update_cache)
+                    stats = pending_scan.result()
                     print(
                         f"[{_now_iso()}] Full-Scan: {stats['total']} aktiv, "
                         f"{stats['new']} neu, {stats['modified']} geändert, "
                         f"{stats['expired']} abgelaufen, {stats['deleted']} gelöscht"
                     )
                 except Exception as exc:
-                    print(f"[{_now_iso()}] Full-Scan fehlgeschlagen: {exc}",
-                          file=sys.stderr)
+                    print(
+                        f"[{_now_iso()}] Full-Scan fehlgeschlagen: {exc}",
+                        file=sys.stderr,
+                    )
+                pending_scan = None
                 last_full_scan = time.monotonic()
-                # Quick-Check-Timer nach Full-Scan zurücksetzen (kein Doppelcheck)
                 last_check = time.monotonic()
 
-            elif now - last_check >= config.CHECK_INTERVAL:
+            elif pending_scan is None and now - last_full_scan >= config.FULL_SCAN_INTERVAL:
+                pending_scan = _submit_full_scan()
+
+            elif pending_scan is None and now - last_check >= config.CHECK_INTERVAL:
                 try:
                     _run_quick_check(db)
                 except Exception as exc:
-                    print(f"[{_now_iso()}] Quick-Check fehlgeschlagen: {exc}",
-                          file=sys.stderr)
+                    print(
+                        f"[{_now_iso()}] Quick-Check fehlgeschlagen: {exc}",
+                        file=sys.stderr,
+                    )
                 last_check = time.monotonic()
 
+            if pending_scan is not None:
+                running_for = time.monotonic() - pending_scan_started_mono
+                if (
+                    running_for >= SCAN_OVERRUN_WARN_SECONDS
+                    and now - last_overrun_warning >= SCAN_OVERRUN_WARN_SECONDS
+                ):
+                    print(
+                        f"[{_now_iso()}] WARNING: full scan has run for "
+                        f"{running_for:.0f}s; heartbeat remains independent.",
+                        file=sys.stderr,
+                    )
+                    last_overrun_warning = now
+
             now2 = time.monotonic()
-            if now2 - last_stats_scan >= STATS_SCAN_INTERVAL:
+            if pending_scan is None and now2 - last_stats_scan >= STATS_SCAN_INTERVAL:
                 try:
                     _run_stats_scan(db)
                     last_stats_scan = time.monotonic()
                     print(f"[{_now_iso()}] Stats-Scan abgeschlossen.")
                 except Exception as exc:
-                    print(f"[{_now_iso()}] Stats-Scan fehlgeschlagen: {exc}", file=sys.stderr)
+                    print(
+                        f"[{_now_iso()}] Stats-Scan fehlgeschlagen: {exc}",
+                        file=sys.stderr,
+                    )
 
             time.sleep(1)
 
     finally:
+        stop_heartbeat.set()
+        heartbeat_thread.join(timeout=2)
+        executor.shutdown(wait=False, cancel_futures=True)
         db.close()
         _clear_daemon_status(os.getpid())
         print(f"[{_now_iso()}] Lock-Watcher beendet.")

@@ -15,7 +15,8 @@ echo [1/2] Starte/prüfe Watcher-Daemon ...
 start "" /B python "%DIR%lock_watcher.py" --update-cache
 
 :: Kurz warten, damit die DB/Heartbeat initialisiert ist
-timeout /t 2 /nobreak >nul
+:: ping works even when stdin is redirected by a scheduler, CI job or pipe.
+ping -n 3 127.0.0.1 >nul
 
 :: Web-Server nicht doppelt starten
 powershell -NoProfile -ExecutionPolicy Bypass -Command "try { Invoke-RestMethod -Uri 'http://127.0.0.1:8095/api/stats' -TimeoutSec 1 | Out-Null; exit 0 } catch { exit 1 }" >nul 2>nul

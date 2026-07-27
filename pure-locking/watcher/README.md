@@ -17,6 +17,16 @@ from the repository root:
 
 `lock_roots.json` is intentionally local and ignored by Git.
 
+Resolution order:
+
+1. `LOCK_MASTER_ROOTS_FILE`
+2. `pure-locking/lock_roots.json`
+3. `<OneDrive>/_scripts/lock_roots.json` from the Windows OneDrive environment
+4. `~/OneDrive/_scripts/lock_roots.json`
+
+Startup fails with an actionable list of checked paths when no configuration is
+available.
+
 ## Runtime Data
 
 Runtime data is stored outside the repository by default:
@@ -91,6 +101,8 @@ Write endpoints are intended for local browser use and validate local origins.
 
 - Full scan: every 60 seconds.
 - Quick check of known active locks: every 20 seconds.
-- Daemon heartbeat: every 5 seconds.
+- Daemon heartbeat: every 5 seconds, in a thread independent from full scans.
+- A fresh heartbeat with an overlong or stale full scan reports `degraded`,
+  never `running`.
 - Directory statistics: every 15 minutes.
 - Singleton behavior: a fresh daemon on the same host is reused; a second daemon exits.

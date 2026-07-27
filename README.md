@@ -5,7 +5,7 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Multi-Agent Lock Protocol](https://img.shields.io/badge/multi--agent-file%20locking-green.svg)](#features)
-[![Pytest 64 passed](https://img.shields.io/badge/pytest-64%20passed-brightgreen.svg)](#)
+[![Pytest 72 passed](https://img.shields.io/badge/pytest-72%20passed-brightgreen.svg)](#)
 [![LLM Indexing](https://img.shields.io/badge/llms.txt-indexed-purple.svg)](llms.txt)
 
 **EN** | [DE](README_de.md) | [ES](README_es.md) | [JA](README_ja.md) | [RU](README_ru.md) | [ZH](README_zh-Hans.md)
@@ -95,6 +95,12 @@ extraction does **not** include.
 Copy `pure-locking/lock_roots.example.json`, rename it to `lock_roots.json`, and replace
 the placeholder paths with your actual project roots. The file is excluded from
 version control by `.gitignore` (it contains local absolute paths).
+
+The optional watcher resolves this file in the following order:
+`LOCK_MASTER_ROOTS_FILE`, local `pure-locking/lock_roots.json`, the active
+Windows OneDrive location under `_scripts/lock_roots.json`, and finally
+`~/OneDrive/_scripts/lock_roots.json`. If none exists, startup fails with the
+complete list of checked paths instead of opening an empty or misleading UI.
 
 ```json
 {

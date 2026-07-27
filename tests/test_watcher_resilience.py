@@ -1,0 +1,202 @@
+"""Regression coverage for the portable watcher backalignment.
+
+These cases protect the failure modes from T-20260715-01: missing external
+roots configuration, a heartbeat blocked by a long scan, stale scan data shown
+as healthy, and protected locks expiring in the derived watcher database.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+import tempfile
+import threading
+import time
+from datetime import datetime, timedelta
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+WATCHER = ROOT / "pure-locking" / "watcher"
+os.environ.setdefault(
+    "LOCK_MASTER_WATCHER_DATA",
+    str(Path(tempfile.mkdtemp(prefix="lockmaster-resilience-"))),
+)
+sys.path.insert(0, str(WATCHER))
+
+import config  # noqa: E402
+import lock_utils  # noqa: E402
+import lock_watcher  # noqa: E402
+import storage  # noqa: E402
+import web_server  # noqa: E402
+
+
+def test_external_roots_file_is_resolved(monkeypatch, tmp_path: Path):
+    roots_file = tmp_path / "lock_roots.json"
+    roots_file.write_text(
+        json.dumps({"roots": [{"path": str(tmp_path)}]}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(config, "_roots_file_candidates", lambda: [roots_file])
+
+    assert config.resolve_roots_file() == roots_file
+    assert config.load_scan_config()["roots"][0]["path"] == str(tmp_path)
+
+
+def test_missing_roots_file_has_actionable_error(monkeypatch, tmp_path: Path):
+    missing = tmp_path / "missing.json"
+    monkeypatch.setattr(config, "_roots_file_candidates", lambda: [missing])
+
+    try:
+        config.resolve_roots_file()
+    except FileNotFoundError as exc:
+        message = str(exc)
+    else:
+        raise AssertionError("missing roots file did not fail")
+
+    assert config.ROOTS_FILE_ENV in message
+    assert str(missing) in message
+
+
+def test_protected_locks_never_get_nominal_expiry(tmp_path: Path):
+    user_lock = tmp_path / "LOCK.user.txt"
+    user_lock.write_text(
+        "owner: user\ncreated: 2020-01-01T00:00\nexpires_after: 1h\n",
+        encoding="utf-8",
+    )
+    condition_lock = tmp_path / "LOCK.condition.publish.txt"
+    condition_lock.write_text(
+        "owner: agent\ncreated: 2020-01-01T00:00\nexpires_after: 1h\n"
+        "release_condition: approved\n",
+        encoding="utf-8",
+    )
+
+    assert lock_utils.compute_expires_at(user_lock) is None
+    assert lock_utils.compute_expires_at(condition_lock) is None
+
+
+def test_storage_does_not_expire_protected_rows(tmp_path: Path):
+    db = storage.LockDB(tmp_path / "watcher.db")
+    old = (datetime.now() - timedelta(days=10)).isoformat(timespec="seconds")
+    try:
+        for kind in ("user", "condition"):
+            db.upsert_lock(
+                {
+                    "path": str(tmp_path / f"LOCK.{kind}.txt"),
+                    "filename": f"LOCK.{kind}.txt",
+                    "project_dir": str(tmp_path),
+                    "scope": "project",
+                    "lock_type": kind,
+                    "expires_at": old,
+                }
+            )
+
+        assert db.refresh_expired_locks() == 0
+        assert {row["lock_type"] for row in db.get_active_locks()} == {
+            "user",
+            "condition",
+        }
+    finally:
+        db.close()
+
+
+def test_heartbeat_advances_while_scan_is_in_progress(monkeypatch, tmp_path: Path):
+    counter = {"n": 0}
+
+    def fake_now_iso() -> str:
+        counter["n"] += 1
+        return f"2026-07-27T21:{counter['n']:02d}:00"
+
+    status_path = tmp_path / "daemon_status.json"
+    monkeypatch.setattr(lock_watcher.config, "DAEMON_STATUS_PATH", status_path)
+    monkeypatch.setattr(lock_watcher, "_now_iso", fake_now_iso)
+
+    stop_event = threading.Event()
+    scan_state = {
+        "scan_in_progress": True,
+        "scan_started_at": "2026-07-27T21:00:00",
+        "last_scan_finished_at": None,
+        "last_scan_duration_s": None,
+    }
+    thread = threading.Thread(
+        target=lock_watcher._heartbeat_loop,
+        args=(
+            stop_event,
+            True,
+            "2026-07-27T21:00:00",
+            scan_state,
+            threading.Lock(),
+            0.02,
+        ),
+        daemon=True,
+    )
+    thread.start()
+    time.sleep(0.15)
+    stop_event.set()
+    thread.join(timeout=2)
+
+    status = json.loads(status_path.read_text(encoding="utf-8"))
+    assert counter["n"] > 3
+    assert status["scan_in_progress"] is True
+    assert status["last_seen"] != status["started_at"]
+
+
+def test_real_lock_appears_and_disappears_across_scans(tmp_path: Path):
+    project = tmp_path / "project"
+    project.mkdir()
+    lock_path = project / "LOCK.txt"
+    lock_path.write_text(
+        "owner: regression\ncreated: 2026-07-27T21:00\n",
+        encoding="utf-8",
+    )
+    db = storage.LockDB(tmp_path / "scan.db")
+    cfg = {
+        "default_max_depth": 4,
+        "shallow_depth": 2,
+        "skip_dirs": [],
+        "roots": [{"path": str(tmp_path)}],
+    }
+    try:
+        first = lock_watcher._run_full_scan(db, cfg, update_cache=False)
+        assert first["new"] == 1
+        assert str(lock_path) in {row["path"] for row in db.get_active_locks()}
+
+        lock_path.unlink()
+        second = lock_watcher._run_full_scan(db, cfg, update_cache=False)
+        assert second["deleted"] == 1
+        assert str(lock_path) not in {row["path"] for row in db.get_active_locks()}
+    finally:
+        db.close()
+
+
+def test_stale_scan_with_fresh_heartbeat_is_degraded(monkeypatch, tmp_path: Path):
+    db = storage.LockDB(tmp_path / "health.db")
+    old = (datetime.now() - timedelta(seconds=10_000)).isoformat(timespec="seconds")
+    now = datetime.now().isoformat(timespec="seconds")
+    db.record_scan(
+        "full",
+        old,
+        old,
+        {"total": 1, "new": 1, "expired": 0, "deleted": 0},
+    )
+    status = {
+        "pid": os.getpid(),
+        "host": lock_watcher.socket.gethostname(),
+        "started_at": now,
+        "last_seen": now,
+        "update_cache": True,
+        "scan_in_progress": False,
+        "scan_started_at": None,
+    }
+    monkeypatch.setattr(lock_watcher, "load_daemon_status", lambda: status)
+    monkeypatch.setattr(lock_watcher, "_daemon_status_is_fresh", lambda value: True)
+    try:
+        assert web_server._daemon_status_for_api(db)["state"] == "degraded"
+    finally:
+        db.close()
+
+
+def test_windows_launcher_does_not_depend_on_timeout_stdin():
+    launcher = (WATCHER / "START.bat").read_text(encoding="utf-8")
+    assert "timeout /t" not in launcher.lower()
+    assert "ping -n 3 127.0.0.1" in launcher.lower()

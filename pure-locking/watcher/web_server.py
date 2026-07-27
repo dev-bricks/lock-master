@@ -110,7 +110,18 @@ def _save_user_profile(profile: dict) -> None:
     )
 
 
-def _daemon_status_for_api() -> dict:
+def _iso_age_seconds(value: str | None) -> int | None:
+    if not value:
+        return None
+    try:
+        then = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    return int((datetime.now() - then).total_seconds())
+
+
+def _daemon_status_for_api(db: storage.LockDB | None = None) -> dict:
+    """Combine process heartbeat and scan freshness into one health state."""
     import lock_watcher as _lw
 
     status = _lw.load_daemon_status()
@@ -118,15 +129,45 @@ def _daemon_status_for_api() -> dict:
         return {"state": "unknown"}
 
     age = _lw._status_age_seconds(status)
-    fresh = _lw._daemon_status_is_fresh(status)
+    heartbeat_fresh = _lw._daemon_status_is_fresh(status)
+    scan_in_progress = bool(status.get("scan_in_progress"))
+    scan_started_at = status.get("scan_started_at")
+    last_scan_age_seconds = None
+    if db is not None:
+        try:
+            last_scan_age_seconds = _iso_age_seconds(db.get_stats().get("last_scan_at"))
+        except Exception:
+            last_scan_age_seconds = None
+
+    scan_started_age = _iso_age_seconds(scan_started_at) if scan_in_progress else None
+    scan_stuck = (
+        scan_started_age is not None
+        and scan_started_age > _lw.SCAN_OVERRUN_WARN_SECONDS
+    )
+    scan_stale = (
+        last_scan_age_seconds is not None
+        and last_scan_age_seconds > _lw.SCAN_OVERRUN_WARN_SECONDS
+    )
+    if not heartbeat_fresh:
+        state = "stale"
+    elif scan_stuck or scan_stale:
+        state = "degraded"
+    else:
+        state = "running"
+
     return {
-        "state": "running" if fresh else "stale",
+        "state": state,
         "pid": status.get("pid"),
         "host": status.get("host"),
         "started_at": status.get("started_at"),
         "last_seen": status.get("last_seen"),
         "age_seconds": age,
         "update_cache": bool(status.get("update_cache")),
+        "scan_in_progress": scan_in_progress,
+        "scan_started_at": scan_started_at,
+        "last_scan_finished_at": status.get("last_scan_finished_at"),
+        "last_scan_duration_s": status.get("last_scan_duration_s"),
+        "last_scan_age_seconds": last_scan_age_seconds,
     }
 
 
@@ -371,7 +412,15 @@ class WatcherHandler(BaseHTTPRequestHandler):
         self._json_response(events)
 
     def _get_stats(self, qs: dict):
-        self._json_response(self.server.db.get_stats())
+        import lock_watcher as _lw
+
+        stats = self.server.db.get_stats()
+        age = _iso_age_seconds(stats.get("last_scan_at"))
+        stats["last_scan_age_seconds"] = age
+        stats["scan_stale"] = (
+            age is not None and age > _lw.SCAN_OVERRUN_WARN_SECONDS
+        )
+        self._json_response(stats)
 
     def _get_profile(self, qs: dict):
         self._json_response(_load_user_profile())
@@ -381,7 +430,8 @@ class WatcherHandler(BaseHTTPRequestHandler):
             "full_scan_interval": config.FULL_SCAN_INTERVAL,
             "check_interval": config.CHECK_INTERVAL,
             "db_path": str(config.DB_PATH),
-            "daemon": _daemon_status_for_api(),
+            "roots_file": str(config.resolve_roots_file()),
+            "daemon": _daemon_status_for_api(self.server.db),
         })
 
     # ── API: POST ──────────────────────────────────────────────

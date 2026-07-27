@@ -411,6 +411,8 @@ def parse_team_lock_sections(raw_content: str) -> dict | None:
 
 def compute_expires_at(lock_path: Path) -> str | None:
     """Absolute expiry time as an ISO string, or None if not determinable."""
+    if is_protected_lock(lock_path.name):
+        return None
     try:
         created, expires, _ = lock_created_and_expiry(lock_path)
         return (created + expires).isoformat(timespec="seconds")

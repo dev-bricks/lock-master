@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.5.0] - 2026-07-27
+
+### Fixed
+
+- Portable watcher startup now supports `LOCK_MASTER_ROOTS_FILE` and
+  user-neutral discovery of an existing OneDrive `_scripts/lock_roots.json`.
+  Missing configuration fails with an actionable diagnostic instead of a bare
+  `FileNotFoundError`.
+- Daemon heartbeats run independently from full scans. A blocked filesystem scan
+  can no longer freeze process health reporting.
+- The API reports `degraded` when scan progress or the last completed scan is
+  stale, even while the daemon heartbeat is fresh.
+- User and condition locks receive no nominal expiry timestamp, and the watcher
+  database excludes both types from automatic expiry as a second defence.
+- The Windows launcher uses a `ping` delay that works with redirected stdin
+  instead of `timeout /t`.
+
+### Added
+
+- Eight resilience regressions covering roots discovery, missing-config
+  diagnostics, heartbeat progress during a stuck scan, real scan roundtrips,
+  stale-scan health, protected-lock expiry and launcher behavior.
+
 ## [1.4.4] - 2026-07-27
 
 ### Maintenance & Technical Hygiene

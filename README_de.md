@@ -5,7 +5,7 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![Lizenz: MIT](https://img.shields.io/badge/Lizenz-MIT-yellow.svg)](LICENSE)
 [![Multi-Agent Lock Protokoll](https://img.shields.io/badge/multi--agent-file%20locking-green.svg)](#features)
-[![Pytest 64 passed](https://img.shields.io/badge/pytest-64%20passed-brightgreen.svg)](#)
+[![Pytest 72 passed](https://img.shields.io/badge/pytest-72%20passed-brightgreen.svg)](#)
 [![LLM Indexierung](https://img.shields.io/badge/llms.txt-indexiert-purple.svg)](llms.txt)
 
 [EN](README.md) | **DE** | [ES](README_es.md) | [JA](README_ja.md) | [RU](README_ru.md) | [ZH](README_zh-Hans.md)
@@ -90,6 +90,13 @@ Was bei einer Teilentnahme **fehlt**, steht in
 ### 2. `lock_roots.json` erstellen
 
 `pure-locking/lock_roots.example.json` kopieren, zu `lock_roots.json` umbenennen und die Platzhalter-Pfade durch echte Projektpfade ersetzen. Die Datei wird von `.gitignore` ausgeschlossen (sie enthält lokale absolute Pfade).
+
+Der optionale Watcher löst diese Datei in folgender Reihenfolge auf:
+`LOCK_MASTER_ROOTS_FILE`, lokale `pure-locking/lock_roots.json`, die aktive
+Windows-OneDrive-Position unter `_scripts/lock_roots.json` und zuletzt
+`~/OneDrive/_scripts/lock_roots.json`. Wird keine Datei gefunden, bricht der
+Start mit allen geprüften Pfaden ab, statt eine leere oder irreführende Ansicht
+zu öffnen.
 
 ```json
 {
