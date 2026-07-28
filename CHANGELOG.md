@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.5.1] - 2026-07-28
+
+### Added
+
+- `lock_status.py` CLI utility and `pure-locking/lock_status.py` implementation for per-project lock status checks (Exit 0 = no lock / free, Exit 1 = locked, Exit 2 = error). Supports `--json` output and alternative `--project <path>` argument. Unit test suite added in `tests/test_lock_status.py`.
+
 ## [1.5.0] - 2026-07-27
 
 ### Fixed

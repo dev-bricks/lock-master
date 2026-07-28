@@ -58,7 +58,7 @@
 
 ## Ideas / Backlog
 
-- [ ] `lock_status.py` -- per-project status check (exit 0 = no lock, exit 1 = locked)
+- [x] `lock_status.py` -- per-project status check (exit 0 = no lock, exit 1 = locked) -- done 2026-07-28
 - [ ] Integration example for cron-based stale cleanup
 - [ ] Optional installer/launcher wrapper for `pure-locking/watcher/` on non-Windows systems
 
