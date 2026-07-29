@@ -145,8 +145,9 @@ def test_real_lock_appears_and_disappears_across_scans(tmp_path: Path):
     project = tmp_path / "project"
     project.mkdir()
     lock_path = project / "LOCK.txt"
+    now_str = datetime.now().isoformat(timespec="seconds")
     lock_path.write_text(
-        "owner: regression\ncreated: 2026-07-27T21:00\n",
+        f"owner: regression\ncreated: {now_str}\n",
         encoding="utf-8",
     )
     db = storage.LockDB(tmp_path / "scan.db")

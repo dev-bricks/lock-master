@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- Fixed hardcoded static timestamp in `tests/test_watcher_resilience.py` (`test_real_lock_appears_and_disappears_across_scans`) by using dynamic ISO timestamps to prevent test failure on non-July-27 run dates.
+
+### Changed
+
+- Refreshed `llms.txt` `Last-checked` timestamp to `2026-07-29` and verified 72/72 pytest test suite passing.
+
 ## [1.5.0] - 2026-07-27
 
 ### Fixed
