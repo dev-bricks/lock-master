@@ -11,6 +11,16 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 - `lock_status.py` CLI utility and `pure-locking/lock_status.py` implementation for per-project lock status checks (Exit 0 = no lock / free, Exit 1 = locked, Exit 2 = error). Supports `--json` output and alternative `--project <path>` argument. Unit test suite added in `tests/test_lock_status.py`.
 
+## [Unreleased]
+
+### Fixed
+
+- Fixed hardcoded static timestamp in `tests/test_watcher_resilience.py` (`test_real_lock_appears_and_disappears_across_scans`) by using dynamic ISO timestamps to prevent test failure on non-July-27 run dates.
+
+### Changed
+
+- Refreshed `llms.txt` `Last-checked` timestamp to `2026-07-29` and verified 72/72 pytest test suite passing.
+
 ## [1.5.0] - 2026-07-27
 
 ### Fixed
