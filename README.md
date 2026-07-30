@@ -1,4 +1,4 @@
-<p align="center"><img src="assets/banner.svg" alt="lock-master" width="100%"></p>
+<p align="center"><img src="assets/banner.png" alt="lock-master" width="100%"></p>
 
 # lock-master
 
