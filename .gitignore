@@ -47,3 +47,6 @@ Thumbs.db
 # Test artefacts
 tests/tmp/
 tests/*.lock.txt
+
+# Konfliktkopien-Archiv (Verfahren: .SYNC/AUFTRAG_ALLE-DESKTOP-APPS_KONFLIKTKOPIEN-WARTUNG)
+_archive/
