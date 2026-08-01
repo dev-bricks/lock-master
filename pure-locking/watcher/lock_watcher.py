@@ -57,24 +57,31 @@ def load_daemon_status() -> dict | None:
 
 
 def _pid_is_running(pid: int) -> bool:
+    """Laeuft die PID noch?
+
+    Bewusst ueber ctypes/OpenProcess statt ueber einen `tasklist`-Subprozess:
+    Unter pythonw.exe gibt es keine Standardausgabe, `subprocess.run(...).stdout`
+    ist dann None, und der frueher hier stehende `.splitlines()`-Aufruf warf
+    AttributeError. Folge war, dass sich der Daemon fensterlos nicht mehr
+    starten liess, sobald noch ein frischer Heartbeat in daemon_status.json
+    stand (beobachtet 2026-08-01). OpenProcess braucht keine Konsole, oeffnet
+    kein Fenster und ist deutlich schneller.
+    """
     if pid <= 0:
         return False
     if os.name == "nt":
+        import ctypes
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
         try:
-            result = subprocess.run(
-                ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
-                capture_output=True,
-                text=True,
-                timeout=2,
+            handle = ctypes.windll.kernel32.OpenProcess(
+                PROCESS_QUERY_LIMITED_INFORMATION, False, int(pid)
             )
-        except (OSError, subprocess.TimeoutExpired):
+        except Exception:  # noqa: BLE001 -- im Zweifel "laeuft nicht"
             return False
-        if result.returncode != 0:
+        if not handle:
             return False
-        for row in csv.reader(result.stdout.splitlines()):
-            if len(row) >= 2 and row[1] == str(pid):
-                return True
-        return False
+        ctypes.windll.kernel32.CloseHandle(handle)
+        return True
     try:
         os.kill(pid, 0)
     except OSError:
