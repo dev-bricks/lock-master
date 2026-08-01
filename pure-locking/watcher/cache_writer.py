@@ -129,7 +129,18 @@ def generate_cache(db: storage.LockDB) -> None:
     scan_format_locks = [_db_lock_to_scan_format(lock) for lock in active_locks]
     scanned_at = datetime.now()
 
-    written = lock_scan.write_caches(scan_format_locks, scanned_at)
+    # Signatur-tolerant: write_caches() nimmt in dieser Modulfassung zusaetzlich
+    # die Konfiguration entgegen (Cache-Ziele stehen im "caches"-Block der
+    # lock_roots.json). Aeltere Fassungen haben die Ziele hartkodiert und
+    # erwarten nur zwei Argumente. Ohne diese Weiche bricht der Cache-Schreibpfad
+    # still, sobald die Code-Quelle wechselt.
+    import inspect
+    if "config" in inspect.signature(lock_scan.write_caches).parameters:
+        written = lock_scan.write_caches(
+            scan_format_locks, scanned_at, config.load_scan_config()
+        )
+    else:
+        written = lock_scan.write_caches(scan_format_locks, scanned_at)
     for path, count in written:
         print(f"cache_writer: {path} ({count} aktive Locks geschrieben)")
 

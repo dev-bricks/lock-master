@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -40,9 +41,34 @@ DEFAULT_ROOTS_FILE = Path(__file__).resolve().parent / "lock_roots.json"
 SYSTEM_CACHE_PATH = Path(__file__).resolve().parent / "LOCK-CACHE.md"
 
 
+def _expand_path(raw: str) -> str:
+    """Expand `~` and environment variables in a configured path.
+
+    Configurations are meant to be portable across machines and users, so they
+    may reference the home directory or environment variables (`%USERPROFILE%`
+    on Windows, `$HOME` on POSIX) instead of hardcoding absolute paths. Without
+    this expansion such an entry stays a literal, `Path.exists()` returns False
+    and the root is silently skipped -- the scan then reports far fewer locks
+    than actually exist, which is worse than failing loudly.
+    """
+    return os.path.expanduser(os.path.expandvars(str(raw)))
+
+
 def load_config(roots_file: Path) -> dict:
     with open(roots_file, "r", encoding="utf-8") as f:
-        return json.load(f)
+        config = json.load(f)
+
+    for entry in config.get("roots", []):
+        if "path" in entry:
+            entry["path"] = _expand_path(entry["path"])
+
+    for entry in config.get("caches", []):
+        if "path" in entry:
+            entry["path"] = _expand_path(entry["path"])
+        if entry.get("filter_prefix"):
+            entry["filter_prefix"] = _expand_path(entry["filter_prefix"])
+
+    return config
 
 
 def iter_lock_dirs(config: dict):

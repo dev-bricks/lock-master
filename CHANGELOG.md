@@ -15,6 +15,8 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `load_config()` now expands `~` and environment variables (`%USERPROFILE%`, `$HOME`) in configured `roots[].path`, `caches[].path` and `caches[].filter_prefix`. Previously such entries stayed literal strings, `Path.exists()` returned False and the root was skipped **silently** — no exception, no warning, just fewer results. Observed 2026-08-01 on a consumer whose `lock_roots.json` referenced all OneDrive roots via `%USERPROFILE%`: the watcher reported 2 instead of 12 active locks. A lock watcher that misses locks is worse than none, because it reports false safety. Regression tests in `tests/test_config_path_expansion.py`.
+- `watcher/cache_writer.py` called `lock_scan.write_caches()` with the two-argument signature while this module's version requires `config` as a third argument, breaking the cache write path with `TypeError`. The call now adapts to either signature.
 - Fixed hardcoded static timestamp in `tests/test_watcher_resilience.py` (`test_real_lock_appears_and_disappears_across_scans`) by using dynamic ISO timestamps to prevent test failure on non-July-27 run dates.
 
 ### Changed
