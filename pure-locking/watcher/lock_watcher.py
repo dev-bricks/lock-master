@@ -48,6 +48,31 @@ def _now_iso() -> str:
     return datetime.now().isoformat(timespec="seconds")
 
 
+def _ensure_utf8_stdio_for_stream(stream) -> None:
+    """Reconfigure a single stream to tolerant UTF-8, wenn moeglich."""
+    if stream is not None and hasattr(stream, "reconfigure"):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (ValueError, OSError):
+            pass
+
+
+def _ensure_utf8_stdio() -> None:
+    """Haertet stdout/stderr gegen die System-Codepage des Aufrufers.
+
+    Fensterlose Starter (z. B. der VBS-Wrapper des Scheduled Tasks) setzen
+    kein PYTHONIOENCODING; unter Windows faellt Python dann auf die lokale
+    Codepage zurueck (meist cp1252), die Zeichen wie "→" nicht kodieren kann.
+    Bislang beendete ein einzelner solcher print() (_run_quick_check bei
+    einem geloeschten/abgelaufenen Lock) den gesamten Daemon mit
+    UnicodeEncodeError — beobachtet ASUS-GEI 2026-08-02, ca. alle 10-40 Min.
+    reconfigure() macht die Streams robust, unabhaengig davon, ob der
+    Aufrufer die Umgebungsvariable setzt.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        _ensure_utf8_stdio_for_stream(stream)
+
+
 def load_daemon_status() -> dict | None:
     """Lädt den letzten Daemon-Heartbeat."""
     try:
@@ -441,6 +466,7 @@ def run_once(update_cache: bool) -> None:
 
 
 def main() -> int:
+    _ensure_utf8_stdio()
     parser = argparse.ArgumentParser(description="Lock-File-Watcher Daemon")
     parser.add_argument(
         "--once",

@@ -7,6 +7,8 @@ as healthy, and protected locks expiring in the derived watcher database.
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import os
 import sys
@@ -15,6 +17,8 @@ import threading
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 WATCHER = ROOT / "pure-locking" / "watcher"
@@ -201,3 +205,71 @@ def test_windows_launcher_does_not_depend_on_timeout_stdin():
     launcher = (WATCHER / "START.bat").read_text(encoding="utf-8")
     assert "timeout /t" not in launcher.lower()
     assert "ping -n 3 127.0.0.1" in launcher.lower()
+
+
+def test_quick_check_survives_non_utf8_stdout(tmp_path: Path):
+    """Regression fuer den ASUS-GEI-Dauerabsturz 2026-08-02.
+
+    Ein fensterloser Start (VBS-Wrapper des Scheduled Task) setzt kein
+    PYTHONIOENCODING. Ohne _ensure_utf8_stdio() wirft _run_quick_check()
+    dann UnicodeEncodeError, sobald ein Lock als geloescht/abgelaufen
+    erkannt wird (print(f"... -> {path}") mit U+2192 auf einem strikten
+    cp1252-Stream) und reisst den ganzen Daemon mit sich. Bewiesen: derselbe
+    Stream crasht ohne den Fix, ist danach robust.
+    """
+    project = tmp_path / "project"
+    project.mkdir()
+    lock_path = project / "LOCK.txt"
+    now_str = datetime.now().isoformat(timespec="seconds")
+    lock_path.write_text(
+        f"owner: regression\ncreated: {now_str}\n",
+        encoding="utf-8",
+    )
+    db = storage.LockDB(tmp_path / "quickcheck.db")
+    cfg = {
+        "default_max_depth": 4,
+        "shallow_depth": 2,
+        "skip_dirs": [],
+        "roots": [{"path": str(tmp_path)}],
+    }
+    try:
+        lock_watcher._run_full_scan(db, cfg, update_cache=False)
+        assert str(lock_path) in {row["path"] for row in db.get_active_locks()}
+        lock_path.unlink()
+
+        buffer = io.BytesIO()
+        strict_cp1252_stream = io.TextIOWrapper(
+            buffer, encoding="cp1252", errors="strict"
+        )
+
+        # Ohne den Fix: exakt der Absturz, der auf ASUS-GEI beobachtet wurde.
+        with pytest.raises(UnicodeEncodeError):
+            with contextlib.redirect_stdout(strict_cp1252_stream):
+                lock_watcher._run_quick_check(db)
+            strict_cp1252_stream.flush()
+
+        # Lock wurde beim gescheiterten Versuch bereits als geloescht
+        # markiert (print() schlaegt NACH dem DB-Update fehl) — Datenbank
+        # neu aufsetzen, damit der zweite Durchlauf denselben Ausgangspunkt hat.
+        db.close()
+        db = storage.LockDB(tmp_path / "quickcheck2.db")
+        lock_path.write_text(
+            f"owner: regression\ncreated: {now_str}\n", encoding="utf-8"
+        )
+        lock_watcher._run_full_scan(db, cfg, update_cache=False)
+        lock_path.unlink()
+
+        buffer2 = io.BytesIO()
+        fixed_stream = io.TextIOWrapper(buffer2, encoding="cp1252", errors="strict")
+        lock_watcher._ensure_utf8_stdio_for_stream(fixed_stream)
+
+        with contextlib.redirect_stdout(fixed_stream):
+            lock_watcher._run_quick_check(db)
+        fixed_stream.flush()
+
+        buffer2.seek(0)
+        output = buffer2.read().decode("utf-8")
+        assert "gelöscht" in output
+        assert str(lock_path) in output
+    finally:
+        db.close()
