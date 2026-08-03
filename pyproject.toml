@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lock-master"
-version = "1.5.0"
+version = "1.5.1"
 description = "Portable, zero-dependency multi-agent file-lock system — Exclusive and Team Locks (LOCK*.txt)"
 readme = "README.md"
 authors = [
@@ -42,6 +42,6 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/dev-bricks/lock-master#readme"
-Repository = "https://github.com/dev-bricks/lock-master.git"
-Issues = "https://github.com/dev-bricks/lock-master/issues"
+Homepage = "https://github.com/ellmos-ai/lock-master#readme"
+Repository = "https://github.com/ellmos-ai/lock-master.git"
+Issues = "https://github.com/ellmos-ai/lock-master/issues"
