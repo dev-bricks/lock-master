@@ -22,7 +22,7 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- Refreshed `llms.txt` `Last-checked` timestamp to `2026-08-03`, synchronized Pytest badges (80 passed) in `README.md` & `README_de.md`, aligned `pyproject.toml` version (1.5.1) & URLs (`ellmos-ai/lock-master`). [2026-08-03]
+- Refreshed `llms.txt` `Last-checked` timestamp to `2026-08-04`, synchronized Pytest badges (81 passed) and added organisation (`ellmos-ai`) & umbrella (`open-bricks`) badges in `README.md` & `README_de.md`. [2026-08-04]
 
 ## [1.5.0] - 2026-07-27
 

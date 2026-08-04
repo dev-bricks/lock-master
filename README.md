@@ -5,15 +5,17 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Multi-Agent Lock Protocol](https://img.shields.io/badge/multi--agent-file%20locking-green.svg)](#features)
-[![Pytest 80 passed](https://img.shields.io/badge/pytest-80%20passed-brightgreen.svg)](#)
+[![Pytest 81 passed](https://img.shields.io/badge/pytest-81%20passed-brightgreen.svg)](#)
 [![LLM Indexing](https://img.shields.io/badge/llms.txt-indexed-purple.svg)](llms.txt)
+[![ellmos-ai](https://img.shields.io/badge/Ecosystem-ellmos--ai-blue.svg)](https://github.com/ellmos-ai)
+[![open-bricks](https://img.shields.io/badge/Umbrella-open--bricks-orange.svg)](https://github.com/open-bricks)
 
 **EN** | [DE](README_de.md) | [ES](README_es.md) | [JA](README_ja.md) | [RU](README_ru.md) | [ZH](README_zh-Hans.md)
 
 **Portable, config-driven file-lock system for multi-agent project coordination.**
 
 > [!NOTE]
-> **AI / LLM Indexing**: AI agents and automated tools can inspect [llms.txt](llms.txt) for a machine-readable summary, search terms, and disambiguation details. Last checked: **2026-08-03**.
+> **AI / LLM Indexing**: AI agents and automated tools can inspect [llms.txt](llms.txt) for a machine-readable summary, search terms, and disambiguation details. Last checked: **2026-08-04**.
 
 lock-master provides a lightweight, zero-dependency locking protocol based on
 plain text files. A `LOCK*.txt` file in a project directory signals that the
